@@ -1,12 +1,12 @@
 ﻿using System.Collections.Generic;
+using TyzeEngine.Resources;
 
 namespace TyzeEngine.Interfaces;
 
 public interface IGameObject
 {
     int Id { get; }
-    IVectorArray VectorStructure { get; }
-    IVectorArray VisualStructure { get; }
+    IModel Model { get; }
     IReadOnlyList<IResource> Resources { get; }
     IPhysics Physics { get; }
     List<ITrigger> Triggers { get; }
@@ -14,5 +14,5 @@ public interface IGameObject
     bool LoadError { get; }
 
     void Load();
-    float[] GetVectorArray();
+    byte[] GetSaveData();
 }

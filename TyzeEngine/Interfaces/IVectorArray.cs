@@ -12,6 +12,7 @@ public enum ArrayType
 public interface IVectorArray
 {
     ArrayType Type { get; }
+    int Length { get; }
     
     void AddVector(float x);
     void AddVector(float x, float y);

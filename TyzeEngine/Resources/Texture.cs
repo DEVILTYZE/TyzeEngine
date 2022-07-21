@@ -4,24 +4,38 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
-namespace TyzeEngine;
+namespace TyzeEngine.Resources;
 
-public class Texture : IDisposable
+public sealed class Texture : Resource
 {
     private bool _disposed;
     
     public int Handle { get; }
+    public bool IsEnabled { get; private set; }
 
-    public Texture(string path)
+
+    public Texture(string path) : base(path)
     {
-        Handle = GL.GenTexture();
-        Use();
-
-        var image = Image.Load<Rgba32>(path);
+        IsEnabled = false;
+        Image<Rgba32> image;
+        
+        try
+        {
+            image = Image.Load<Rgba32>(path);
+        }
+        catch (Exception)
+        {
+            LoadError = true;
+            return;
+        }
+        
         image.Mutate(img => img.Flip(FlipMode.Vertical));
 
         var pixels = new byte[ConstHelper.ImageConst * image.Width * image.Height];
         image.CopyPixelDataTo(pixels);
+        
+        Handle = GL.GenTexture();
+        Load();
         
         // WRAPPING
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
@@ -37,19 +51,18 @@ public class Texture : IDisposable
     
     ~Texture() => GL.DeleteProgram(Handle);
     
-    public void Use() => GL.BindTexture(TextureTarget.Texture2D, Handle);
-
-    public void Dispose()
+    public override void Load()
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
+        GL.BindTexture(TextureTarget.Texture2D, Handle);
+        IsEnabled = true;
     }
 
-    private void Dispose(bool disposing)
+    protected override void Dispose(bool disposing)
     {
         if (_disposed) 
             return;
         
+        IsEnabled = false;
         GL.DeleteProgram(Handle);
         _disposed = true;
     }

@@ -2,7 +2,7 @@
 
 namespace TyzeEngine.Interfaces;
 
-public interface IGroupObject
+public interface IComplexObject
 {
     List<IGameObject> Objects { get; }
 

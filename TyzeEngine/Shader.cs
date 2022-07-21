@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using OpenTK.Graphics.OpenGL4;
+using OpenTK.Mathematics;
 
 namespace TyzeEngine;
 
@@ -9,51 +10,28 @@ public sealed class Shader : IDisposable
 {
     private bool _disposed;
     
-    public string Errors { get; }
+    public string Error { get; private set; }
     public int Handle { get; }
 
     public Shader(string vertexPath, string fragmentPath)
     {
-        Errors = string.Empty;
-        
-        string vertexShaderSource, fragmentShaderSource;
+        Error = string.Empty;
 
-        using (var sr = new StreamReader(vertexPath, Encoding.UTF8))
-        {
-            vertexShaderSource = sr.ReadToEnd();
-        }
-
-        using (var sr = new StreamReader(fragmentPath, Encoding.UTF8))
-        {
-            fragmentShaderSource = sr.ReadToEnd();
-        }
-
-        var vertexShader = GL.CreateShader(ShaderType.VertexShader);
-        var fragmentShader = GL.CreateShader(ShaderType.FragmentShader);
-        GL.ShaderSource(vertexShader, vertexShaderSource);
-        GL.ShaderSource(fragmentShader, fragmentShaderSource);
-        
-        GL.CompileShader(vertexShader);
-        GL.GetShader(vertexShader, ShaderParameter.CompileStatus, out var success);
-
-        if (success == 0)
-            Errors += GL.GetShaderInfoLog(vertexShader);
-        
-        GL.CompileShader(fragmentShader);
-        GL.GetShader(fragmentShader, ShaderParameter.CompileStatus, out success);
-        
-        if (success == 0)
-            Errors += GL.GetShaderInfoLog(vertexShader);
+        var vertexShader = CreateShader(vertexPath, ShaderType.VertexShader);
+        var fragmentShader = CreateShader(fragmentPath, ShaderType.FragmentShader);
 
         Handle = GL.CreateProgram();
         GL.AttachShader(Handle, vertexShader);
         GL.AttachShader(Handle, fragmentShader);
         GL.LinkProgram(Handle);
         
-        GL.GetProgram(Handle, GetProgramParameterName.LinkStatus, out success);
+        GL.GetProgram(Handle, GetProgramParameterName.LinkStatus, out var errorCode);
 
-        if (success == 0)
-            Errors += GL.GetProgramInfoLog(vertexShader);
+        if (errorCode != (int)All.True)
+        {
+            Error = GL.GetProgramInfoLog(vertexShader);
+            throw new Exception($"Shader program link error: {Error}");
+        }
         
         GL.DetachShader(Handle, vertexShader);
         GL.DetachShader(Handle, fragmentShader);
@@ -63,7 +41,17 @@ public sealed class Shader : IDisposable
 
     ~Shader() => GL.DeleteProgram(Handle);
     
-    public void Use() => GL.UseProgram(Handle);
+    public void Activate() => GL.UseProgram(Handle);
+
+    public void Deactivate() => GL.UseProgram(0);
+
+    public int GetAttributeLocation(string parameterName) => GL.GetAttribLocation(Handle, parameterName);
+
+    public void SetUniform(string uniformName, Vector4 vector)
+    {
+        var location = GL.GetUniformLocation(Handle, uniformName);
+        GL.Uniform4(location, vector);
+    }
 
     public void Dispose()
     {
@@ -78,5 +66,21 @@ public sealed class Shader : IDisposable
         
         GL.DeleteProgram(Handle);
         _disposed = true;
+    }
+
+    private int CreateShader(string path, ShaderType type)
+    {
+        var shaderSource = File.ReadAllText(path, Encoding.UTF8);
+        var shader = GL.CreateShader(type);
+        GL.ShaderSource(shader, shaderSource);
+        
+        GL.CompileShader(shader);
+        GL.GetShader(shader, ShaderParameter.CompileStatus, out var errorCode);
+
+        if (errorCode == (int)All.True) 
+            return shader;
+        
+        Error = GL.GetShaderInfoLog(shader);
+        throw new Exception($"Shader compile error: {Error}");
     }
 }

@@ -8,6 +8,7 @@ public class VectorArray : IVectorArray
     private readonly List<float> _list;
     
     public ArrayType Type { get; private set; }
+    public int Length => _list.Count;
 
     public VectorArray()
     {
