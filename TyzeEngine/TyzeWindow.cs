@@ -1,44 +1,53 @@
-﻿using System.Collections.Generic;
-using System.IO;
+﻿using System;
+using System.Collections.Generic;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using TyzeEngine.GameStructure;
-using TyzeEngine.Interfaces;
+using TyzeEngine.Objects;
 
 namespace TyzeEngine;
 
 public partial class TyzeWindow : GameWindow
 {
     private readonly IReadOnlyList<IScene> _scenes;
-    private BufferObject _vertexBufferObject, elementBufferObject;
-    private ArrayObject _arrayObject;
-    private Shader _shaderColor, _shaderTexture;
-    
-    private uint[] _indices; // remove
-    private int _vertexArrayObject;
+    private int _currentSceneIndex;
+    private Shader _shader;
+
+    public TriggerHandler TriggerLoadObjects { get; }
+    public TriggerHandler TriggerNextScene { get; }
 
     public TyzeWindow(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings, 
         IReadOnlyList<IScene> scenes) 
         : base(gameWindowSettings, nativeWindowSettings)
     {
+        if (scenes is null || scenes.Count == 0)
+            throw new ArgumentException("Count of scenes is zero.", nameof(scenes));
+
+        TriggerLoadObjects += LoadObjects;
+        TriggerNextScene += LoadScene;
+        VSync = VSyncMode.Off;
         _scenes = scenes;
+        _currentSceneIndex = 0;
+        _scenes[_currentSceneIndex].ReloadObjects = TriggerLoadObjects;
+        _scenes[_currentSceneIndex].LoadSceneHandler = TriggerNextScene;
+        
+        // SHOW FPS SETTINGS
+        _title = nativeWindowSettings.Title;
+        _time = 0;
+        _frames = 0;
     }
 
     protected override void OnLoad()
     {
         base.OnLoad();
-        GL.ClearColor(.2f, .3f, .3f, 1.0f);
+        GL.ClearColor(.9f, .9f, .9f, 1.0f);
 
-        _shaderColor = new Shader(
-            Path.Combine(ConstHelper.AssetsDirectory, ConstHelper.ShadersDirectory, ConstHelper.ShaderVertColorPath), 
-            Path.Combine(ConstHelper.AssetsDirectory, ConstHelper.ShadersDirectory,ConstHelper.ShaderFragColorPath));
-        _shaderColor.Activate();
-        _shaderTexture = new Shader(
-            Path.Combine(ConstHelper.AssetsDirectory, ConstHelper.ShadersDirectory, ConstHelper.ShaderVertTexturePath), 
-            Path.Combine(ConstHelper.AssetsDirectory, ConstHelper.ShadersDirectory, ConstHelper.ShaderFragTexturePath));
-        _shaderTexture.Activate();
+        _shader = new Shader(ConstHelper.ShaderVertTexturePath, ConstHelper.ShaderFragTexturePath);
+        UseShader(true);
+
+        LoadObjects();
     }
 
     protected override void OnRenderFrame(FrameEventArgs args)
@@ -46,14 +55,10 @@ public partial class TyzeWindow : GameWindow
         base.OnRenderFrame(args);
         GL.Clear(ClearBufferMask.ColorBufferBit);
         
-        _shaderColor.Activate();
-        _shaderTexture.Activate();
-        
-        GL.BindVertexArray(_vertexArrayObject);
-        GL.DrawElements(PrimitiveType.Triangles, _indices.Length, DrawElementsType.UnsignedInt, 0);
-        
-        _shaderTexture.Deactivate();
-        _shaderColor.Deactivate();
+        ShowFps(args.Time);
+        UseShader(true);
+        DrawObjects();
+        UseShader(false);
 
         SwapBuffers();
     }
@@ -76,15 +81,13 @@ public partial class TyzeWindow : GameWindow
 
     protected override void OnUnload()
     {
-        _shaderColor.Dispose();
-        _shaderTexture.Dispose();
+        _shader.Dispose();
         
-        
-        base.OnUnload();
-    }
+        foreach (var place in _scenes[_currentSceneIndex].CurrentPlace.NeighbourPlaces)
+            ((IDisposable)place).Dispose();
 
-    private void LoadObject(IGameObject obj)
-    {
-        
+        ((IDisposable)_scenes[_currentSceneIndex].CurrentPlace).Dispose();
+
+        base.OnUnload();
     }
 }

@@ -1,14 +1,5 @@
 ﻿namespace TyzeEngine.Interfaces;
 
-public enum ArrayType
-{
-    Unknown = 0,
-    OneDimension = 1,
-    TwoDimensions = 2,
-    ThreeDimensions = 3,
-    FourDimensions = 4,
-}
-
 public interface IVectorArray
 {
     ArrayType Type { get; }

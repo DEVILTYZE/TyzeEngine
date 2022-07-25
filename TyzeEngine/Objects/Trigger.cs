@@ -1,23 +1,51 @@
-﻿using TyzeEngine.GameStructure;
+﻿using System;
+using System.Linq;
+using TyzeEngine.GameStructure;
 using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Objects;
 
-public class Trigger : ITrigger
+public delegate void TriggerHandler(EventTriggeredArgs args);
+
+public class Trigger : ITrigger, ISaveable
 {
-    private event ITrigger.TriggeredLoadEvent TriggeredLoad;
-    private event ITrigger.TriggeredWorkEvent TriggeredWork;
     private readonly int _placeId;
 
-    public Trigger(IScene scene, int placeId)
+    protected event TriggerHandler Triggered;
+    
+    public int Id { get; }
+    public bool IsTriggered { get; set; }
+    public bool SaveStatus { get; }
+
+    private Trigger(int id, bool notSave)
     {
-        TriggeredLoad += scene.LoadPlace;
+        Id = id;
+        SaveStatus = !notSave;
+    }
+
+    public Trigger(int id, IScene scene, int placeId, bool notSave = false) : this(id, notSave)
+    {
+        Triggered += scene.LoadPlace;
         _placeId = placeId;
     }
 
-    public Trigger(IScript script) => TriggeredWork += script.Start;
-    
-    protected virtual void OnTriggeredLoad() => TriggeredLoad?.Invoke(_placeId);
-    
-    protected virtual void OnTriggeredWork() => TriggeredWork?.Invoke();
+    public Trigger(int id, IScript script, bool notSave = false) : this(id, notSave)
+    {
+        _placeId = -1;
+        Triggered += script.Execute;
+    }
+
+    public byte[] GetSaveData()
+    {
+        var id = BitConverter.GetBytes(Id);
+        var isTriggered = BitConverter.GetBytes(IsTriggered);
+
+        return id.Concat(isTriggered).ToArray();
+    }
+
+    protected virtual void OnTriggered()
+    {
+        Triggered?.Invoke(new EventTriggeredArgs(_placeId));
+        IsTriggered = true;
+    }
 }

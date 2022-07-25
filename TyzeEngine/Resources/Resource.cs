@@ -9,15 +9,14 @@ public abstract class Resource : IResource, IDisposable
     public string Path { get; private set; }
     public bool LoadError { get; protected set; }
 
-    protected Resource(string path)
-    {
-        Path = path;
-    }
+    protected Resource(string path) => Path = path;
 
     ~Resource() => Dispose(false);
 
     public abstract void Load();
-    
+    public abstract void Enable();
+    public abstract void Disable();
+
     public void Dispose()
     {
         Dispose(true);
@@ -30,5 +29,6 @@ public abstract class Resource : IResource, IDisposable
             return;
 
         Path = null;
+        _disposed = true;
     }
 }

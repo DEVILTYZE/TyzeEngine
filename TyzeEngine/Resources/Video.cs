@@ -13,6 +13,16 @@ public class Video : Resource
         throw new NotImplementedException();
     }
 
+    public override void Enable()
+    {
+        throw new NotImplementedException();
+    }
+
+    public override void Disable()
+    {
+        throw new NotImplementedException();
+    }
+
     protected override void Dispose(bool disposing)
     {
         throw new NotImplementedException();

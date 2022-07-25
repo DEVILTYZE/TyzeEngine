@@ -4,19 +4,6 @@ using OpenTK.Graphics.OpenGL4;
 
 namespace TyzeEngine;
 
-public enum BufferType
-{
-    ArrayBuffer = BufferTarget.ArrayBuffer,
-    ElementBuffer = BufferTarget.ElementArrayBuffer
-}
-
-public enum BufferHint
-{
-    StaticDraw = BufferUsageHint.StaticDraw,
-    DynamicDraw = BufferUsageHint.DynamicDraw,
-    StreamDraw = BufferUsageHint.StreamDraw
-}
-
 public sealed class BufferObject : IDisposable
 {
     private readonly BufferTarget _type;
@@ -25,22 +12,22 @@ public sealed class BufferObject : IDisposable
     public int Handle { get; }
     public bool IsEnabled { get; private set; }
 
-    public BufferObject(BufferType type)
+    public BufferObject(BufferTarget type)
     {
-        _type = (BufferTarget)type;
+        _type = type;
         Handle = GL.GenBuffer();
         IsEnabled = false;
     }
 
     ~BufferObject() => Dispose(false);
 
-    public void SetData<T>(T[] data, BufferHint hint) where T : struct
+    public void SetData<T>(T[] data, BufferUsageHint hint) where T : struct
     {
         if (data is null || data.Length == 0)
             throw new ArgumentException("Data is null or empty.", nameof(data));
-        
+
         Enable();
-        GL.BufferData(_type, data.Length * Marshal.SizeOf(typeof(T)), data, (BufferUsageHint)hint);
+        GL.BufferData(_type, data.Length * Marshal.SizeOf(typeof(T)), data, hint);
         Disable();
     }
 
@@ -64,10 +51,11 @@ public sealed class BufferObject : IDisposable
 
     private void Dispose(bool disposing)
     {
-        if (_disposed || Handle == ConstHelper.ErrorCodeBuffer)
+        if (_disposed || Handle == ConstHelper.ErrorCode)
             return;
         
         Disable();
         GL.DeleteBuffer(Handle);
+        _disposed = true;
     }
 }

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Threading;
+using TyzeEngine.Interfaces;
+using TyzeEngine.Objects;
 
 namespace TyzeEngine.GameStructure;
 
@@ -7,6 +9,8 @@ public class Scene : IScene
 {
     private bool _loadError;
     private Thread _loadingPlacesThread;
+
+    Thread IScene.LoadingPlacesThread => _loadingPlacesThread;
 
     public bool LoadError
     {
@@ -22,20 +26,25 @@ public class Scene : IScene
 
     public ILighting Lighting { get; }
     public IPlace CurrentPlace { get; }
-
+    public TriggerHandler ReloadObjects { get; set; }
+    public TriggerHandler LoadSceneHandler { get; set; }
+    
     public Scene(IPlace spawnPlace)
     {
         CurrentPlace = spawnPlace;
         LoadError = false;
     }
     
-    public void LoadPlace(int id)
+    public void LoadPlace(EventTriggeredArgs args)
     {
+        if (!args.IsLoadTrigger)
+            return;
+        
         if (_loadingPlacesThread is not null && _loadingPlacesThread.IsAlive)
             _loadingPlacesThread.Join();
         
         _loadingPlacesThread = new Thread(LoadPlace);
-        _loadingPlacesThread.Start(id);
+        _loadingPlacesThread.Start(args.PlaceId);
     }
 
     public void Start()
@@ -45,6 +54,8 @@ public class Scene : IScene
         // Other settings...
     }
 
+    public void LoadScene(int index) => LoadSceneHandler?.Invoke(new EventTriggeredArgs(index));
+    
     private void LoadPlace(object obj)
     {
         var id = (int)obj;
@@ -76,15 +87,22 @@ public class Scene : IScene
             if (neighbourPlace.Loaded)
                 continue;
 
-            foreach (var localObj in neighbourPlace.Objects)
-            {
-                localObj.Load();
-                
-                if (!localObj.LoadError)
-                    LoadError = true;
-            }
-
-            neighbourPlace.Loaded = true;
+            LoadPlace(neighbourPlace);
         }
+        
+        LoadPlace(place);
+    }
+
+    private void LoadPlace(IPlace place)
+    {
+        foreach (var localObj in place.Objects)
+        {
+            localObj.Load();
+                
+            if (!localObj.LoadError)
+                LoadError = true;
+        }
+
+        place.Loaded = true;
     }
 }

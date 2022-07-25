@@ -9,6 +9,8 @@ public interface IResource
     bool LoadError { get; }
 
     void Load();
+    void Enable();
+    void Disable();
 
     internal static IResource GetByPath(string path)
     {
@@ -17,13 +19,15 @@ public interface IResource
         if (string.IsNullOrEmpty(extension))
             throw new Exception("Can't determine the format.");
 
-        if (ConstHelper.ImageExtensions.Any(thisExtension => string.CompareOrdinal(thisExtension, extension) == 0))
+        bool IsEquals(string str1, string str2) => string.CompareOrdinal(str1, str2) == 0;
+
+        if (ConstHelper.ImageExtensions.Any(thisExtension => IsEquals(thisExtension, extension)))
             return new Texture(path);
 
-        if (ConstHelper.AudioExtensions.Any(thisExtension => string.CompareOrdinal(thisExtension, extension) == 0))
+        if (ConstHelper.AudioExtensions.Any(thisExtension => IsEquals(thisExtension, extension)))
             return new Audio(path);
 
-        if (ConstHelper.VideoExtensions.Any(thisExtension => string.CompareOrdinal(thisExtension, extension) == 0))
+        if (ConstHelper.VideoExtensions.Any(thisExtension => IsEquals(thisExtension, extension)))
             return new Video(path);
         
         throw new Exception("Can't determine the format.");

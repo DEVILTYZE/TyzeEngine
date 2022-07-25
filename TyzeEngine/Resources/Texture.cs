@@ -10,18 +10,26 @@ public sealed class Texture : Resource
 {
     private bool _disposed;
     
-    public int Handle { get; }
+    public int Handle { get; private set; }
     public bool IsEnabled { get; private set; }
-
+    public TextureUnit Unit { get; set; }
 
     public Texture(string path) : base(path)
     {
+        Unit = TextureUnit.Texture0;
+        Handle = -1;
         IsEnabled = false;
+    }
+
+    ~Texture() => Dispose(false);
+    
+    public override void Load()
+    {
         Image<Rgba32> image;
         
         try
         {
-            image = Image.Load<Rgba32>(path);
+            image = Image.Load<Rgba32>(Path);
         }
         catch (Exception)
         {
@@ -35,7 +43,7 @@ public sealed class Texture : Resource
         image.CopyPixelDataTo(pixels);
         
         Handle = GL.GenTexture();
-        Load();
+        Enable();
         
         // WRAPPING
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
@@ -48,13 +56,24 @@ public sealed class Texture : Resource
         GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, image.Width, 
             image.Height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, pixels);
     }
-    
-    ~Texture() => GL.DeleteProgram(Handle);
-    
-    public override void Load()
+
+    public override void Enable()
     {
+        if (Handle == ConstHelper.ErrorCode)
+            Load();
+        
         GL.BindTexture(TextureTarget.Texture2D, Handle);
+        GL.ActiveTexture(Unit);
         IsEnabled = true;
+    }
+
+    public override void Disable()
+    {
+        if (Handle == ConstHelper.ErrorCode)
+            return;
+        
+        GL.BindTexture(TextureTarget.Texture2D, 0);
+        IsEnabled = false;
     }
 
     protected override void Dispose(bool disposing)
@@ -62,9 +81,8 @@ public sealed class Texture : Resource
         if (_disposed) 
             return;
         
-        IsEnabled = false;
-        GL.DeleteProgram(Handle);
+        Disable();
+        GL.DeleteTexture(Handle);
         _disposed = true;
     }
-
 }

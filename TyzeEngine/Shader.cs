@@ -41,9 +41,9 @@ public sealed class Shader : IDisposable
 
     ~Shader() => GL.DeleteProgram(Handle);
     
-    public void Activate() => GL.UseProgram(Handle);
+    public void Enable() => GL.UseProgram(Handle);
 
-    public void Deactivate() => GL.UseProgram(0);
+    public void Disable() => GL.UseProgram(0);
 
     public int GetAttributeLocation(string parameterName) => GL.GetAttribLocation(Handle, parameterName);
 
