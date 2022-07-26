@@ -8,3 +8,10 @@ public enum ArrayType
     ThreeDimensions = 3,
     FourDimensions = 4,
 }
+
+public enum VisibilityType
+{
+    Visible = 0,
+    Hidden = 1,
+    Collapsed = 2
+}

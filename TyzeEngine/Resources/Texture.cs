@@ -25,6 +25,9 @@ public sealed class Texture : Resource
     
     public override void Load()
     {
+        Handle = GL.GenTexture();
+        Enable();
+        
         Image<Rgba32> image;
         
         try
@@ -39,37 +42,34 @@ public sealed class Texture : Resource
         
         image.Mutate(img => img.Flip(FlipMode.Vertical));
 
-        var pixels = new byte[ConstHelper.ImageConst * image.Width * image.Height];
+        var pixels = new byte[Constants.ImageConst * image.Width * image.Height];
         image.CopyPixelDataTo(pixels);
+
+        // GENERATE
+        GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, image.Width, image.Height, 
+            0, PixelFormat.Rgba, PixelType.UnsignedByte, pixels);
         
-        Handle = GL.GenTexture();
-        Enable();
+        // FILTERING
+        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMagFilter.Linear);
+        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
         
         // WRAPPING
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
         
-        // FILTERING
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        
-        // GENERATE
-        GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, image.Width, 
-            image.Height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, pixels);
+        GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
     }
 
     public override void Enable()
     {
-        if (Handle == ConstHelper.ErrorCode)
-            Load();
-        
-        GL.BindTexture(TextureTarget.Texture2D, Handle);
         GL.ActiveTexture(Unit);
+        GL.BindTexture(TextureTarget.Texture2D, Handle);
         IsEnabled = true;
     }
 
     public override void Disable()
     {
-        if (Handle == ConstHelper.ErrorCode)
+        if (Handle == Constants.ErrorCode)
             return;
         
         GL.BindTexture(TextureTarget.Texture2D, 0);
@@ -82,7 +82,6 @@ public sealed class Texture : Resource
             return;
         
         Disable();
-        GL.DeleteTexture(Handle);
         _disposed = true;
     }
 }

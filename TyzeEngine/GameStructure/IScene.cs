@@ -14,7 +14,7 @@ public interface IScene
     TriggerHandler ReloadObjects { get; set; }
     TriggerHandler LoadSceneHandler { get; set; }
 
-    void LoadPlace(EventTriggeredArgs args);
+    void LoadPlace(TriggeredEventArgs args);
     void Start();
     void LoadScene(int index);
 }

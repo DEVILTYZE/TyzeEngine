@@ -12,7 +12,7 @@ public class Saver
 
     public void SaveObjects(IReadOnlyList<IGameObject> objects)
     {
-        _saveFileName = Path.Combine(ConstHelper.SavesDirectory, ConstHelper.DefaultSaveName + ConstHelper.SaveExtension);
+        _saveFileName = Path.Combine(Constants.SavesDirectory, Constants.DefaultSaveName + Constants.SaveExtension);
 
         ThreadPool.QueueUserWorkItem(_ => SaveObjects((object)objects));
     }

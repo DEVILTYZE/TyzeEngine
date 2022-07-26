@@ -21,13 +21,13 @@ public interface IResource
 
         bool IsEquals(string str1, string str2) => string.CompareOrdinal(str1, str2) == 0;
 
-        if (ConstHelper.ImageExtensions.Any(thisExtension => IsEquals(thisExtension, extension)))
+        if (Constants.ImageExtensions.Any(thisExtension => IsEquals(thisExtension, extension)))
             return new Texture(path);
 
-        if (ConstHelper.AudioExtensions.Any(thisExtension => IsEquals(thisExtension, extension)))
+        if (Constants.AudioExtensions.Any(thisExtension => IsEquals(thisExtension, extension)))
             return new Audio(path);
 
-        if (ConstHelper.VideoExtensions.Any(thisExtension => IsEquals(thisExtension, extension)))
+        if (Constants.VideoExtensions.Any(thisExtension => IsEquals(thisExtension, extension)))
             return new Video(path);
         
         throw new Exception("Can't determine the format.");

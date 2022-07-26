@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using OpenTK.Graphics.OpenGL4;
@@ -9,9 +10,11 @@ namespace TyzeEngine;
 public sealed class Shader : IDisposable
 {
     private bool _disposed;
-    
+    private readonly Dictionary<string, int> _uniformLocations;
+
     public string Error { get; private set; }
     public int Handle { get; }
+    public bool IsEnabled { get; private set; }
 
     public Shader(string vertexPath, string fragmentPath)
     {
@@ -37,20 +40,40 @@ public sealed class Shader : IDisposable
         GL.DetachShader(Handle, fragmentShader);
         GL.DeleteShader(vertexShader);
         GL.DeleteShader(fragmentShader);
+        
+        GL.GetProgram(Handle, GetProgramParameterName.ActiveUniforms, out var countOfUniforms);
+        _uniformLocations = new Dictionary<string, int>();
+
+        for (var i = 0; i < countOfUniforms; ++i)
+        {
+            var key = GL.GetActiveUniform(Handle, i, out _, out _);
+            var location = GL.GetUniformLocation(Handle, key);
+            _uniformLocations.Add(key, location);
+        }
     }
 
     ~Shader() => GL.DeleteProgram(Handle);
     
-    public void Enable() => GL.UseProgram(Handle);
+    public void Enable()
+    {
+        IsEnabled = true;
+        GL.UseProgram(Handle);
+    }
 
-    public void Disable() => GL.UseProgram(0);
+    public void Disable()
+    {
+        IsEnabled = false;
+        GL.UseProgram(0);
+    }
 
     public int GetAttributeLocation(string parameterName) => GL.GetAttribLocation(Handle, parameterName);
 
-    public void SetUniform(string uniformName, Vector4 vector)
+    public void SetMatrix4(string name, Matrix4 matrix)
     {
-        var location = GL.GetUniformLocation(Handle, uniformName);
-        GL.Uniform4(location, vector);
+        if (!IsEnabled)
+            Enable();
+        
+        GL.UniformMatrix4(_uniformLocations[name], true, ref matrix);
     }
 
     public void Dispose()

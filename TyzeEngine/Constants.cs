@@ -1,9 +1,9 @@
 ﻿using System;
-using TyzeEngine.Objects;
+using OpenTK.Mathematics;
 
 namespace TyzeEngine;
 
-public static class ConstHelper
+public static class Constants
 {
     // DIRECTORIES
     public const string AssetsDirectory = "assets\\";
@@ -38,7 +38,10 @@ public static class ConstHelper
     public const int ColorLength = 4;
     public const int TextureStride = TextureLength * sizeof(float);
     public const int TextureLength = 2;
-    internal static readonly Vector4 DefaultColor = new Vector4(.5f, .5f, .5f, 1f);
+    internal static readonly Vector3 DefaultPosition = new(0, 0, 0);
+    internal static readonly Vector3 DefaultSize = new(1, 1, 1);
+    internal static readonly Vector3 DefaultSize2D = new(1, 1, 0);
+    internal static readonly Vector4 DefaultColor = new(.5f, .5f, .5f, 1f);
 
     public static readonly string[] ImageExtensions = { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".ico", ".tiff", ".svg" };
     public static readonly string[] AudioExtensions = { ".mp3", ".wav", ".flac", ".aiff" };

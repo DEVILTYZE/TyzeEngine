@@ -35,16 +35,13 @@ public class Scene : IScene
         LoadError = false;
     }
     
-    public void LoadPlace(EventTriggeredArgs args)
+    public void LoadPlace(TriggeredEventArgs args)
     {
-        if (!args.IsLoadTrigger)
-            return;
-        
         if (_loadingPlacesThread is not null && _loadingPlacesThread.IsAlive)
             _loadingPlacesThread.Join();
         
         _loadingPlacesThread = new Thread(LoadPlace);
-        _loadingPlacesThread.Start(args.PlaceId);
+        _loadingPlacesThread.Start((int)args.Data);
     }
 
     public void Start()
@@ -54,7 +51,7 @@ public class Scene : IScene
         // Other settings...
     }
 
-    public void LoadScene(int index) => LoadSceneHandler?.Invoke(new EventTriggeredArgs(index));
+    public void LoadScene(int index) => LoadSceneHandler?.Invoke(new TriggeredEventArgs(index));
     
     private void LoadPlace(object obj)
     {

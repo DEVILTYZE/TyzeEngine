@@ -51,7 +51,7 @@ public sealed class BufferObject : IDisposable
 
     private void Dispose(bool disposing)
     {
-        if (_disposed || Handle == ConstHelper.ErrorCode)
+        if (_disposed || Handle == Constants.ErrorCode)
             return;
         
         Disable();

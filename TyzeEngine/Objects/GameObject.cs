@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using OpenTK.Graphics.OpenGL4;
 using TyzeEngine.GameStructure;
 using TyzeEngine.Interfaces;
@@ -26,12 +25,12 @@ public record struct SaveGameObjectData
         
         for (var i = 0; i < triggersCount; ++i)
         {
-            var intIndex = i * ConstHelper.SizeOfTrigger + 2 * sizeof(int);
-            var boolIndex = i * ConstHelper.SizeOfTrigger + 3 * sizeof(int);
+            var intIndex = i * Constants.SizeOfTrigger + 2 * sizeof(int);
+            var boolIndex = i * Constants.SizeOfTrigger + 3 * sizeof(int);
             TriggerDictionary.Add(BitConverter.ToInt32(data, intIndex), BitConverter.ToBoolean(data, boolIndex));
         }
 
-        var modelDataIndex = 2 * sizeof(int) + triggersCount * ConstHelper.SizeOfTrigger;
+        var modelDataIndex = 2 * sizeof(int) + triggersCount * Constants.SizeOfTrigger;
         Model = IModel.GetByString(Encoding.UTF8.GetString(data[modelDataIndex..]));
     }
 }
@@ -75,7 +74,8 @@ public abstract class GameObject : IGameObject, ISaveable, ICloneable, IDisposab
     public virtual void Load()
     {
         foreach (var resource in Resources)
-            ThreadPool.QueueUserWorkItem(_ => Load(resource));
+            Load(resource);    
+        //ThreadPool.QueueUserWorkItem(_ => Load(resource));
     }
 
     public void EnableResources()

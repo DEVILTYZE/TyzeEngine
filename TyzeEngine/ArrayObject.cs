@@ -45,7 +45,7 @@ public sealed class ArrayObject : IDisposable
         if (!buffer.IsEnabled)
             buffer.Enable();
 
-        _count += count;
+        _count = count;
         _bufferList.Add(buffer);
     }
 
@@ -93,7 +93,7 @@ public sealed class ArrayObject : IDisposable
 
     private void Dispose(bool disposing)
     {
-        if (_disposed || Handle == ConstHelper.ErrorCode)
+        if (_disposed || Handle == Constants.ErrorCode)
             return;
         
         DisableAttributes();

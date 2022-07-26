@@ -4,5 +4,5 @@ public interface IScript
 {
     IGameObject Object { get; }
 
-    void Execute(EventTriggeredArgs args);
+    void Execute(TriggeredEventArgs args);
 }

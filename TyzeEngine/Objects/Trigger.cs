@@ -5,7 +5,7 @@ using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Objects;
 
-public delegate void TriggerHandler(EventTriggeredArgs args);
+public delegate void TriggerHandler(TriggeredEventArgs args);
 
 public class Trigger : ITrigger, ISaveable
 {
@@ -25,8 +25,8 @@ public class Trigger : ITrigger, ISaveable
 
     public Trigger(int id, IScene scene, int placeId, bool notSave = false) : this(id, notSave)
     {
-        Triggered += scene.LoadPlace;
         _placeId = placeId;
+        Triggered += scene.LoadPlace;
     }
 
     public Trigger(int id, IScript script, bool notSave = false) : this(id, notSave)
@@ -45,7 +45,7 @@ public class Trigger : ITrigger, ISaveable
 
     protected virtual void OnTriggered()
     {
-        Triggered?.Invoke(new EventTriggeredArgs(_placeId));
+        Triggered?.Invoke(new TriggeredEventArgs(_placeId));
         IsTriggered = true;
     }
 }

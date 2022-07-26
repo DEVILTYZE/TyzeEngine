@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using OpenTK.Graphics.OpenGL4;
+using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
 
 namespace TyzeEngine;
@@ -11,50 +12,45 @@ public partial class TyzeWindow
     private int _frames;
     private readonly string _title;
     
-    private void LoadObjects(EventTriggeredArgs args = null)
+    private void LoadObjects(TriggeredEventArgs args = null)
     {
         _scenes[_currentSceneIndex].Start();
         var objects = GetObjects();
-
+        const int stride = Constants.VertexStride + Constants.TextureStride + Constants.ColorStride;
+        
         // Загрузка объекта.
         foreach (var obj in objects)
         {
             // Создание нового Array object для каждого игрового объекта.
             obj.ArrayObject = new ArrayObject();
             obj.ArrayObject.Enable();
-            // Получение точек позиции объекта в пространстве в виде массива float и получение массива uint для Element object.
-            var vectorObject = obj.Model.GetVectorArray();
+            // Получение точек позиции объекта в пространстве, текстуры в пространстве и цвета в виде массива float
+            // и получение массива uint для Element object.
+            var vertices = obj.Model.GetVectorArray();
 
-            // Создание буферов для координатного и визуального представления.
-            var coordinateBuffer = new BufferObject(BufferTarget.ArrayBuffer);
-            var visualBuffer = new BufferObject(BufferTarget.ArrayBuffer);
-
-            coordinateBuffer.SetData(vectorObject.Vertices, obj.DrawType);
-            visualBuffer.SetData(vectorObject.VisualArray, obj.DrawType);
-
-            obj.ArrayObject.AttachBuffer(coordinateBuffer, 0);
-            obj.ArrayObject.AttachBuffer(visualBuffer, 0);
-
-            coordinateBuffer.Enable();
+            // Создание буферa для векторного представления.
+            var buffer = new BufferObject(BufferTarget.ArrayBuffer);
+            buffer.SetData(vertices.Item1, obj.DrawType);
+            obj.ArrayObject.AttachBuffer(buffer, 0);
+            
             // Получение индексов для трёх атрибутов (позиция, текстура и цвет).
             var position = _shader.GetAttributeLocation("aPosition");
             var texture = _shader.GetAttributeLocation("inTexture");
             var color = _shader.GetAttributeLocation("inColor");
-            obj.ArrayObject.EnableAttribute(position, ConstHelper.VertexLength, VertexAttribPointerType.Float, 
-                ConstHelper.VertexStride, 0);
-            coordinateBuffer.Disable();
             
-            visualBuffer.Enable();
-            obj.ArrayObject.EnableAttribute(texture, ConstHelper.TextureLength, VertexAttribPointerType.Float, 
-                ConstHelper.TextureStride + ConstHelper.ColorStride, 0);
-            obj.ArrayObject.EnableAttribute(color, ConstHelper.ColorLength, VertexAttribPointerType.Float, 
-                ConstHelper.TextureStride + ConstHelper.ColorStride, ConstHelper.TextureStride);
-            visualBuffer.Disable();
+            buffer.Enable();
+            obj.ArrayObject.EnableAttribute(position, Constants.VertexLength, VertexAttribPointerType.Float, 
+                stride, 0);
+            obj.ArrayObject.EnableAttribute(texture, Constants.TextureLength, VertexAttribPointerType.Float, 
+                stride, Constants.VertexStride);
+            obj.ArrayObject.EnableAttribute(color, Constants.ColorLength, VertexAttribPointerType.Float, 
+                stride, Constants.VertexStride + Constants.TextureStride);
+            buffer.Disable();
 
             // Создание буфера для Element object.
             var indicesBuffer = new BufferObject(BufferTarget.ElementArrayBuffer);
-            indicesBuffer.SetData(vectorObject.Indices, obj.DrawType);
-            obj.ArrayObject.AttachBuffer(indicesBuffer, vectorObject.Indices.Length);
+            indicesBuffer.SetData(vertices.Item2, obj.DrawType);
+            obj.ArrayObject.AttachBuffer(indicesBuffer, vertices.Item2.Length);
             
             obj.ArrayObject.Disable();
             // Связывание ресурсов для текущего объекта.
@@ -64,25 +60,35 @@ public partial class TyzeWindow
 
     private void DrawObjects()
     {
+        Matrix4 GetMatrix(IGameObject obj)
+        {
+            var scale = Matrix4.Identity * Matrix4.CreateScale(obj.Model.Size);
+            var rotationX = scale * Matrix4.CreateRotationX(obj.Model.Rotation.X);
+            var rotationY = rotationX * Matrix4.CreateRotationY(obj.Model.Rotation.Y);
+            var rotationZ = rotationY * Matrix4.CreateRotationZ(obj.Model.Rotation.Z);
+            
+            return rotationZ * Matrix4.CreateTranslation(obj.Model.Position);
+        }
+        void SetMatrices(IGameObject obj)
+        {
+            var model = GetMatrix(obj);
+            _shader.SetMatrix4("model", model);
+            _shader.SetMatrix4("view", _view);
+            _shader.SetMatrix4("projection", _projection);
+        }
+        
         var objects = GetObjects();
 
         foreach (var obj in objects)
         {
+            obj.ArrayObject.Enable();
             obj.EnableResources();
+            SetMatrices(obj);
             obj.ArrayObject.Draw(DrawElementsType.UnsignedInt);
         }
     }
 
-    private void UseShader(bool isEnable)
-    {
-        if (isEnable)
-            _shader.Enable();
-        else
-            _shader.Disable();
-        
-    }
-
-    private void LoadScene(EventTriggeredArgs args) => _currentSceneIndex = (int)args.Data;
+    private void LoadScene(TriggeredEventArgs args) => _currentSceneIndex = (int)args.Data;
 
     private IEnumerable<IGameObject> GetObjects()
     {

@@ -8,5 +8,5 @@ public abstract class Script : IScript
 
     protected Script(IGameObject obj) => Object = obj;
     
-    public abstract void Execute(EventTriggeredArgs args = null);
+    public abstract void Execute(TriggeredEventArgs args = null);
 }
