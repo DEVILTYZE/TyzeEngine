@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Objects;
+using TyzeEngine.Resources;
 
 namespace TyzeEngine.GameStructure;
 
@@ -21,16 +24,18 @@ public class Scene : IScene
 
             return value;
         }
-        private set => _loadError = value;
+        private init => _loadError = value;
     }
 
     public ILighting Lighting { get; }
     public IPlace CurrentPlace { get; }
+    public List<IResource> Resources { get; }
     public TriggerHandler ReloadObjects { get; set; }
     public TriggerHandler LoadSceneHandler { get; set; }
     
     public Scene(IPlace spawnPlace)
     {
+        Resources = new List<IResource>();
         CurrentPlace = spawnPlace;
         LoadError = false;
     }
@@ -46,12 +51,23 @@ public class Scene : IScene
 
     public void Start()
     {
+        LoadResources();
         LoadPlace(CurrentPlace.Id);
         
         // Other settings...
     }
 
     public void LoadScene(int index) => LoadSceneHandler?.Invoke(new TriggeredEventArgs(index));
+
+    public void LoadResources()
+    {
+        while (LoadQueue.HasNewResources)
+        {
+            var resource = LoadQueue.TakeLast();
+            resource.Load();
+            Resources.Add(resource);
+        }
+    }
     
     private void LoadPlace(object obj)
     {
@@ -78,28 +94,26 @@ public class Scene : IScene
         }
         else
             place = CurrentPlace;
-        
+
+        var resourceIds = new HashSet<Uid>(place.GetResourceIds());
+
         foreach (var neighbourPlace in place.NeighbourPlaces)
         {
             if (neighbourPlace.Loaded)
                 continue;
 
-            LoadPlace(neighbourPlace);
+            foreach (var resource in neighbourPlace.GetResourceIds())
+                resourceIds.Add(resource);
         }
         
-        LoadPlace(place);
+        LoadResources(resourceIds);
     }
-
-    private void LoadPlace(IPlace place)
+    
+    private void LoadResources(IEnumerable<Uid> ids)
     {
-        foreach (var localObj in place.Objects)
-        {
-            localObj.Load();
-                
-            if (!localObj.LoadError)
-                LoadError = true;
-        }
+        var resources = Resources.Where(resource => ids.Any(id => id.Equals(resource.Id)));
 
-        place.Loaded = true;
+        foreach (var resource in resources)
+            resource.Load();
     }
 }

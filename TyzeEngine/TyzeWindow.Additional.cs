@@ -3,6 +3,7 @@ using System.Linq;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
+using TyzeEngine.Resources;
 
 namespace TyzeEngine;
 
@@ -12,10 +13,9 @@ public partial class TyzeWindow
     private int _frames;
     private readonly string _title;
     
-    private void LoadObjects(TriggeredEventArgs args = null)
+    private void LoadObjects(TriggeredEventArgs args)
     {
-        _scenes[_currentSceneIndex].Start();
-        var objects = GetObjects();
+        var objects = GetObjects(args is not null && (bool)args.Data);
         const int stride = Constants.VertexStride + Constants.TextureStride + Constants.ColorStride;
         
         // Загрузка объекта.
@@ -54,7 +54,7 @@ public partial class TyzeWindow
             
             obj.ArrayObject.Disable();
             // Связывание ресурсов для текущего объекта.
-            obj.EnableResources();
+            obj.EnableResources(GetResources());
         }
     }
 
@@ -77,25 +77,34 @@ public partial class TyzeWindow
             _shader.SetMatrix4("projection", _projection);
         }
         
-        var objects = GetObjects();
+        var objects = GetObjects(false);
 
         foreach (var obj in objects)
         {
             obj.ArrayObject.Enable();
-            obj.EnableResources();
+            obj.EnableResources(GetResources());
             SetMatrices(obj);
             obj.ArrayObject.Draw(DrawElementsType.UnsignedInt);
+            obj.DisableResources(GetResources());
         }
     }
 
     private void LoadScene(TriggeredEventArgs args) => _currentSceneIndex = (int)args.Data;
 
-    private IEnumerable<IGameObject> GetObjects()
+    private IEnumerable<IGameObject> GetObjects(bool unloaded)
     {
         var currentPlace = _scenes[_currentSceneIndex].CurrentPlace;
 
-        return new[] { currentPlace }.Concat(currentPlace.NeighbourPlaces).SelectMany(place => place.Objects);
+        if (!unloaded)
+            return new[] { currentPlace }.Concat(currentPlace.NeighbourPlaces).SelectMany(place => place.Objects);
+        
+        var objects = LoadQueue.TakeObjects().ToArray();
+        currentPlace.Objects.AddRange(objects);
+
+        return objects;
     }
+
+    private List<IResource> GetResources() => _scenes[_currentSceneIndex].Resources;
 
     private void ShowFps(double time)
     {

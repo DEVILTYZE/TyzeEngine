@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.GameStructure;
@@ -10,10 +11,10 @@ public class Place : IPlace, IDisposable
     
     public int Id { get; }
     public IReadOnlyList<IPlace> NeighbourPlaces { get; set; }
-    public IReadOnlyList<IGameObject> Objects { get; }
+    public List<IGameObject> Objects { get; }
     public bool Loaded { get; set; }
 
-    public Place(int id, IReadOnlyList<IPlace> neighbourPlaces, IReadOnlyList<IGameObject> objects)
+    public Place(int id, IReadOnlyList<IPlace> neighbourPlaces, List<IGameObject> objects)
     {
         Id = id;
         NeighbourPlaces = neighbourPlaces;
@@ -28,6 +29,9 @@ public class Place : IPlace, IDisposable
         Dispose(true);
         GC.SuppressFinalize(this);
     }
+
+    IEnumerable<Uid> IPlace.GetResourceIds() 
+        => Objects.SelectMany(obj => obj.ResourceIds ?? ArraySegment<Uid>.Empty);
 
     protected virtual void Dispose(bool disposing)
     {

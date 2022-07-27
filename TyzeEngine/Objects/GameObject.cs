@@ -12,13 +12,13 @@ namespace TyzeEngine.Objects;
 public record struct SaveGameObjectData
 {
     public int Id { get; }
-    public string[] ResourcePaths { get; }
+    public Uid[] ResourceIds { get; }
     public IModel Model { get; }
     public Dictionary<int, bool> TriggerDictionary { get; }
 
-    public SaveGameObjectData(string[] resourcePaths, byte[] data)
+    public SaveGameObjectData(Uid[] resourceIds, byte[] data)
     {
-        ResourcePaths = resourcePaths;
+        ResourceIds = resourceIds;
         Id = BitConverter.ToInt32(data);
         var triggersCount = BitConverter.ToInt32(data, sizeof(int));
         TriggerDictionary = new Dictionary<int, bool>(triggersCount);
@@ -44,26 +44,29 @@ public abstract class GameObject : IGameObject, ISaveable, ICloneable, IDisposab
 
     public int Id { get; }
     public IModel Model { get; }
-    public IReadOnlyList<IResource> Resources { get; private set; }
+    public IReadOnlyList<Uid> ResourceIds { get; private set; }
     public IPhysics Physics { get; }
     public List<ITrigger> Triggers { get; }
     public List<IScript> Scripts { get; }
     public virtual bool LoadError { get; private set; }
     public bool SaveStatus { get; }
 
-    protected GameObject(int id, IModel model, IEnumerable<string> resourcePaths = null, IPhysics physics = null, bool notSave = false)
+    protected GameObject(int id, IModel model, IReadOnlyList<Uid> resourceIds = null, IPhysics physics = null, bool notSave = false)
     {
         Id = id;
         Model = model;
         Physics = physics;
-        Resources = resourcePaths is null ? new List<IResource>() : resourcePaths.Select(IResource.GetByPath).ToList();
         SaveStatus = !notSave;
+        ResourceIds = resourceIds is null ? new List<Uid>() : resourceIds.ToList();
         Triggers = new List<ITrigger>();
         Scripts = new List<IScript>();
+        
+        if (resourceIds is not null) 
+            ResourceIds = resourceIds.ToList();
     }
 
     protected GameObject(SaveGameObjectData saveData, IPhysics physics = null, bool notSave = false) 
-        : this(saveData.Id, saveData.Model, saveData.ResourcePaths, physics, notSave)
+        : this(saveData.Id, saveData.Model, saveData.ResourceIds, physics, notSave)
     {
         foreach (var trigger in Triggers.Where(trigger => saveData.TriggerDictionary.ContainsKey(trigger.Id)))
             trigger.IsTriggered = saveData.TriggerDictionary[trigger.Id];
@@ -71,17 +74,20 @@ public abstract class GameObject : IGameObject, ISaveable, ICloneable, IDisposab
     
     ~GameObject() => Dispose(false);
 
-    public virtual void Load()
+    public void EnableResources(List<IResource> resources)
     {
-        foreach (var resource in Resources)
-            Load(resource);    
-        //ThreadPool.QueueUserWorkItem(_ => Load(resource));
+        resources = resources.Where(resource => ResourceIds.Any(id => id.Equals(resource.Id))).ToList();
+        
+        foreach (var resource in resources)
+            resource.Enable();
     }
 
-    public void EnableResources()
+    public void DisableResources(List<IResource> resources)
     {
-        foreach (var resource in Resources)
-            resource.Enable();
+        resources = resources.Where(resource => ResourceIds.Any(id => id.Equals(resource.Id))).ToList();
+        
+        foreach (var resource in resources)
+            resource.Disable();
     }
 
     public byte[] GetSaveData()
@@ -115,7 +121,7 @@ public abstract class GameObject : IGameObject, ISaveable, ICloneable, IDisposab
             // something...
         }
 
-        Resources = null;
+        ResourceIds = null;
         _disposed = true;
     }
 
@@ -133,8 +139,8 @@ public abstract class GameObject : IGameObject, ISaveable, ICloneable, IDisposab
         if (!SaveStatus)
             return BufferUsageHint.StaticDraw;
 
-        if (Physics is null)
-            return Scripts.Count > 0 ? BufferUsageHint.DynamicDraw : BufferUsageHint.StaticDraw;
+        if (Model.Visibility is VisibilityType.Collapsed or VisibilityType.Hidden)
+            return BufferUsageHint.StaticDraw;
 
         if (Scripts.Count > 0 && Triggers.Count > 0)
             return BufferUsageHint.StreamDraw;

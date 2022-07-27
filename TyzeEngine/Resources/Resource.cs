@@ -5,11 +5,16 @@ namespace TyzeEngine.Resources;
 public abstract class Resource : IResource, IDisposable
 {
     private bool _disposed;
-    
+
+    public Uid Id { get; }
     public string Path { get; private set; }
     public bool LoadError { get; protected set; }
 
-    protected Resource(string path) => Path = path;
+    protected Resource(string path)
+    {
+        Path = path;
+        Id = new Uid();
+    }
 
     ~Resource() => Dispose(false);
 

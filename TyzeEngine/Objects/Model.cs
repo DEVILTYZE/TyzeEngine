@@ -34,7 +34,6 @@ public class Model : IModel
     private uint[] _indices;
     private Vector4 _color;
     private IVectorArray _texture;
-    private VisibilityType _visibilityType;
 
     public string Directory { get; }
     public string Name { get; }
@@ -42,6 +41,7 @@ public class Model : IModel
     public Vector3 Position { get; private set; }
     public Vector3 Size { get; private set; }
     public Vector3 Rotation { get; private set; }
+    public VisibilityType Visibility { get; private set; }
 
     public static IModel Point => new Model(DefaultModels.GetPoint(), Constants.DefaultSize2D);
     public static IModel Triangle => new Model(DefaultModels.GetTriangle(), Constants.DefaultSize2D);
@@ -78,10 +78,10 @@ public class Model : IModel
         _color.Z = saveData.Color.Z;
         _color.W = saveData.Color.W;
     }
+    
+    public void TranslateTo(float x, float y, float z) => Position = new Vector3(x, y, z);
 
-    public void Translate(float x, float y, float z) => Position = new Vector3(x, y, z);
-
-    public void Scale(float x, float y, float z)
+    public void ScaleTo(float x, float y, float z)
     {
         if (x < 0 || y < 0 || z < 0)
             return;
@@ -89,7 +89,13 @@ public class Model : IModel
         Size = new Vector3(x, y, z);
     }
 
-    public void Rotate(float x, float y, float z) => Rotation = new Vector3(x, y, z);
+    public void RotateTo(float x, float y, float z) => Rotation = new Vector3(x, y, z);
+
+    public void Translate(float x, float y, float z) => TranslateTo(Position.X + x, Position.Y + y, Position.Z + z);
+
+    public void Scale(float x, float y, float z) => ScaleTo(Size.X * x, Size.Y * y, Size.Z * z);
+
+    public void Rotate(float x, float y, float z) => RotateTo(Rotation.X + x, Rotation.Y + y, Rotation.Z + z); 
 
     public void ChangeColor(byte r, byte g, byte b, byte a)
     {
@@ -113,7 +119,7 @@ public class Model : IModel
 
     public void RemoveTexture() => _texture = null;
 
-    public void ChangeVisibility(VisibilityType newType) => _visibilityType = newType;
+    public void ChangeVisibility(VisibilityType newType) => Visibility = newType;
 
     public (float[], uint[]) GetVectorArray()
     {
@@ -143,7 +149,7 @@ public class Model : IModel
         var texture = new[] { -1f, -1f };
         var colorArray = new[] { _color.X, _color.Y, _color.Z, _color.W };
 
-        return _visibilityType switch
+        return Visibility switch
         {
             VisibilityType.Hidden => (GetArrays(texture, new[] { 0f, 0, 0, 0 }, false), _indices),
             VisibilityType.Collapsed => (new[] { 0f, 0, 0, -1, -1, 0, 0, 0, 0 }, new uint[] { 1 }),

@@ -14,7 +14,11 @@ public interface IModel
     Vector3 Position { get; }
     Vector3 Size { get; }
     Vector3 Rotation { get; }
+    VisibilityType Visibility { get; }
     
+    void TranslateTo(float x, float y, float z);
+    void ScaleTo(float x, float y, float z);
+    void RotateTo(float x, float y, float z);
     void Translate(float x, float y, float z);
     void Scale(float x, float y, float z);
     void Rotate(float x, float y, float z);

@@ -5,6 +5,7 @@ namespace TyzeEngine.Resources;
 
 public interface IResource
 {
+    Uid Id { get; }
     string Path { get; }
     bool LoadError { get; }
 
@@ -12,7 +13,7 @@ public interface IResource
     void Enable();
     void Disable();
 
-    internal static IResource GetByPath(string path)
+    public static IResource GetByPath(string path)
     {
         var extension = System.IO.Path.GetExtension(path);
 

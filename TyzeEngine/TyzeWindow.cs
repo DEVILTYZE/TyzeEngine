@@ -15,15 +15,15 @@ public partial class TyzeWindow : GameWindow
 {
     private readonly IReadOnlyList<IScene> _scenes;
     private int _currentSceneIndex;
+    private readonly IReadOnlyList<IScript> _scripts;
     private Shader _shader;
     private Matrix4 _view, _projection;
-    private List<IScript> _scripts;
 
     public TriggerHandler TriggerLoadObjects { get; }
     public TriggerHandler TriggerNextScene { get; }
 
     public TyzeWindow(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings, 
-        IReadOnlyList<IScene> scenes, List<IScript> scripts = null) 
+        IReadOnlyList<IScene> scenes, IReadOnlyList<IScript> scripts = null) 
         : base(gameWindowSettings, nativeWindowSettings)
     {
         if (scenes is null || scenes.Count == 0)
@@ -31,12 +31,15 @@ public partial class TyzeWindow : GameWindow
         
         TriggerLoadObjects += LoadObjects;
         TriggerNextScene += LoadScene;
-        VSync = VSyncMode.Off;
+        VSync = VSyncMode.On;
         _scenes = scenes;
         _currentSceneIndex = 0;
         _scenes[_currentSceneIndex].ReloadObjects = TriggerLoadObjects;
         _scenes[_currentSceneIndex].LoadSceneHandler = TriggerNextScene;
         _scripts = scripts ?? new List<IScript>();
+
+        foreach (var script in _scripts)
+            script.AddArgs(KeyboardState, _scenes[_currentSceneIndex]);
         
         // SHOW FPS настройки.
         _title = nativeWindowSettings.Title;
@@ -47,18 +50,17 @@ public partial class TyzeWindow : GameWindow
     protected override void OnLoad()
     {
         base.OnLoad();
-        GL.ClearColor(.9f, .9f, .9f, 1.0f);
+        GL.ClearColor(.9f, .9f, .9f, .1f);
 
         _shader = new Shader(Constants.ShaderVertTexturePath, Constants.ShaderFragTexturePath);
         _shader.Enable();
 
-        // _view = Matrix4.CreateTranslation(0, 0, 3);
-        // _projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(45f), 
-        //     Size.X / (float)Size.Y, .1f, 100);
-        _view = Matrix4.Identity;
-        _projection = Matrix4.Identity;
+        _view = Matrix4.CreateTranslation(0, 0, -10);
+        _projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(45f), 
+            Size.X / (float)Size.Y, .1f, 100);
 
-        LoadObjects();
+        _scenes[_currentSceneIndex].Start();
+        LoadObjects(new TriggeredEventArgs(false));
     }
 
     protected override void OnRenderFrame(FrameEventArgs args)
@@ -80,6 +82,9 @@ public partial class TyzeWindow : GameWindow
 
         if (KeyboardState.IsKeyDown(Keys.Escape))
             Close();
+
+        foreach (var script in _scripts)
+            script.Execute(new TriggeredEventArgs(args.Time));
 
         // something...
     }

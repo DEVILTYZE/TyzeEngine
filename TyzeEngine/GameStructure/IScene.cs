@@ -1,6 +1,8 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.Threading;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Objects;
+using TyzeEngine.Resources;
 
 namespace TyzeEngine.GameStructure;
 
@@ -11,10 +13,12 @@ public interface IScene
     bool LoadError { get; }
     ILighting Lighting { get; }
     IPlace CurrentPlace { get; }
+    List<IResource> Resources { get; }
     TriggerHandler ReloadObjects { get; set; }
     TriggerHandler LoadSceneHandler { get; set; }
 
     void LoadPlace(TriggeredEventArgs args);
     void Start();
     void LoadScene(int index);
+    void LoadResources();
 }

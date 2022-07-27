@@ -11,12 +11,11 @@ public interface IGameObject
     
     int Id { get; }
     IModel Model { get; }
-    IReadOnlyList<IResource> Resources { get; }
+    IReadOnlyList<Uid> ResourceIds { get; }
     IPhysics Physics { get; }
     List<ITrigger> Triggers { get; }
     List<IScript> Scripts { get; }
-    bool LoadError { get; }
 
-    void Load();
-    void EnableResources();
+    void EnableResources(List<IResource> resources);
+    void DisableResources(List<IResource> resources);
 }
