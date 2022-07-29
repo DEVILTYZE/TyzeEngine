@@ -4,14 +4,16 @@ namespace TyzeEngine.Resources;
 
 public abstract class Resource : IResource, IDisposable
 {
-    private bool _disposed;
+    protected bool Disposed;
 
     public Uid Id { get; }
+    public int Handle { get; protected set; }
     public string Path { get; private set; }
     public bool LoadError { get; protected set; }
 
     protected Resource(string path)
     {
+        Handle = -1;
         Path = path;
         Id = new Uid();
     }
@@ -30,10 +32,10 @@ public abstract class Resource : IResource, IDisposable
 
     protected virtual void Dispose(bool disposing)
     {
-        if (_disposed)
+        if (Disposed)
             return;
 
         Path = null;
-        _disposed = true;
+        Disposed = true;
     }
 }

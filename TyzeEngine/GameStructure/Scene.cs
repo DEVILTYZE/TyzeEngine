@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Objects;
@@ -29,13 +28,15 @@ public class Scene : IScene
 
     public ILighting Lighting { get; }
     public IPlace CurrentPlace { get; }
-    public List<IResource> Resources { get; }
+    public Dictionary<Uid, IResource> Resources { get; }
+    public Dictionary<Uid, IModel> Models { get; }
     public TriggerHandler ReloadObjects { get; set; }
     public TriggerHandler LoadSceneHandler { get; set; }
     
     public Scene(IPlace spawnPlace)
     {
-        Resources = new List<IResource>();
+        Resources = new Dictionary<Uid, IResource>();
+        Models = new Dictionary<Uid, IModel>();
         CurrentPlace = spawnPlace;
         LoadError = false;
     }
@@ -63,9 +64,16 @@ public class Scene : IScene
     {
         while (LoadQueue.HasNewResources)
         {
-            var resource = LoadQueue.TakeLast();
+            var resource = LoadQueue.TakeLastResource();
             resource.Load();
-            Resources.Add(resource);
+            Resources.Add(resource.Id, resource);
+        }
+
+        while (LoadQueue.HasNewModels)
+        {
+            var model = LoadQueue.TakeLastModel();
+            model.Load();
+            Models.Add(model.Id, model);
         }
     }
     
@@ -111,9 +119,7 @@ public class Scene : IScene
     
     private void LoadResources(IEnumerable<Uid> ids)
     {
-        var resources = Resources.Where(resource => ids.Any(id => id.Equals(resource.Id)));
-
-        foreach (var resource in resources)
-            resource.Load();
+        foreach (var id in ids)
+            Resources[id].Load();
     }
 }

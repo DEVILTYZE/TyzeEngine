@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using OpenTK.Audio.OpenAL;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
@@ -7,7 +8,6 @@ using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using TyzeEngine.GameStructure;
 using TyzeEngine.Interfaces;
-using TyzeEngine.Objects;
 
 namespace TyzeEngine;
 
@@ -18,6 +18,8 @@ public partial class TyzeWindow : GameWindow
     private readonly IReadOnlyList<IScript> _scripts;
     private Shader _shader;
     private Matrix4 _view, _projection;
+    private ALDevice _device;
+    private ALContext _context;
 
     public TriggerHandler TriggerLoadObjects { get; }
     public TriggerHandler TriggerNextScene { get; }
@@ -51,7 +53,9 @@ public partial class TyzeWindow : GameWindow
     {
         base.OnLoad();
         GL.ClearColor(.9f, .9f, .9f, .1f);
+        GL.Enable(EnableCap.DepthTest);
 
+        InitializeAudio();
         _shader = new Shader(Constants.ShaderVertTexturePath, Constants.ShaderFragTexturePath);
         _shader.Enable();
 
@@ -66,7 +70,7 @@ public partial class TyzeWindow : GameWindow
     protected override void OnRenderFrame(FrameEventArgs args)
     {
         base.OnRenderFrame(args);
-        GL.Clear(ClearBufferMask.ColorBufferBit);
+        GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         
         ShowFps(args.Time);
         _shader.Enable();
@@ -98,11 +102,15 @@ public partial class TyzeWindow : GameWindow
     protected override void OnUnload()
     {
         _shader.Dispose();
+        LoadQueue.Clear();
         
         foreach (var place in _scenes[_currentSceneIndex].CurrentPlace.NeighbourPlaces)
             ((IDisposable)place).Dispose();
 
         ((IDisposable)_scenes[_currentSceneIndex].CurrentPlace).Dispose();
+        ALC.MakeContextCurrent(ALContext.Null);
+        ALC.DestroyContext(_context);
+        ALC.CloseDevice(_device);
 
         base.OnUnload();
     }

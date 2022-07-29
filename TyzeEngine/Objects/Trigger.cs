@@ -5,8 +5,6 @@ using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Objects;
 
-public delegate void TriggerHandler(TriggeredEventArgs args);
-
 public class Trigger : ITrigger, ISaveable
 {
     private readonly int _placeId;

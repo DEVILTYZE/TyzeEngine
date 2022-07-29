@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using OpenTK.Audio.OpenAL;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
@@ -16,6 +18,7 @@ public partial class TyzeWindow
     private void LoadObjects(TriggeredEventArgs args)
     {
         var objects = GetObjects(args is not null && (bool)args.Data);
+        var models = GetModels();
         const int stride = Constants.VertexStride + Constants.TextureStride + Constants.ColorStride;
         
         // Загрузка объекта.
@@ -26,7 +29,7 @@ public partial class TyzeWindow
             obj.ArrayObject.Enable();
             // Получение точек позиции объекта в пространстве, текстуры в пространстве и цвета в виде массива float
             // и получение массива uint для Element object.
-            var vertices = obj.Model.GetVectorArray();
+            var vertices = models[obj.ModelId].GetVectorArray(obj);
 
             // Создание буферa для векторного представления.
             var buffer = new BufferObject(BufferTarget.ArrayBuffer);
@@ -62,12 +65,12 @@ public partial class TyzeWindow
     {
         Matrix4 GetMatrix(IGameObject obj)
         {
-            var scale = Matrix4.Identity * Matrix4.CreateScale(obj.Model.Size);
-            var rotationX = scale * Matrix4.CreateRotationX(obj.Model.Rotation.X);
-            var rotationY = rotationX * Matrix4.CreateRotationY(obj.Model.Rotation.Y);
-            var rotationZ = rotationY * Matrix4.CreateRotationZ(obj.Model.Rotation.Z);
+            var scale = Matrix4.Identity * Matrix4.CreateScale(obj.Size);
+            var rotationX = scale * Matrix4.CreateRotationX(obj.Rotation.X);
+            var rotationY = rotationX * Matrix4.CreateRotationY(obj.Rotation.Y);
+            var rotationZ = rotationY * Matrix4.CreateRotationZ(obj.Rotation.Z);
             
-            return rotationZ * Matrix4.CreateTranslation(obj.Model.Position);
+            return rotationZ * Matrix4.CreateTranslation(obj.Position);
         }
         void SetMatrices(IGameObject obj)
         {
@@ -77,7 +80,7 @@ public partial class TyzeWindow
             _shader.SetMatrix4("projection", _projection);
         }
         
-        var objects = GetObjects(false);
+        var objects = GetObjects(false).ToList();
 
         foreach (var obj in objects)
         {
@@ -87,6 +90,8 @@ public partial class TyzeWindow
             obj.ArrayObject.Draw(DrawElementsType.UnsignedInt);
             obj.DisableResources(GetResources());
         }
+        
+        PhysicsGenerator.Collision2D(objects.ToList());
     }
 
     private void LoadScene(TriggeredEventArgs args) => _currentSceneIndex = (int)args.Data;
@@ -97,14 +102,17 @@ public partial class TyzeWindow
 
         if (!unloaded)
             return new[] { currentPlace }.Concat(currentPlace.NeighbourPlaces).SelectMany(place => place.Objects);
-        
+
         var objects = LoadQueue.TakeObjects().ToArray();
         currentPlace.Objects.AddRange(objects);
+        _scenes[_currentSceneIndex].LoadResources();
 
         return objects;
     }
 
-    private List<IResource> GetResources() => _scenes[_currentSceneIndex].Resources;
+    private Dictionary<Uid, IModel> GetModels() => _scenes[_currentSceneIndex].Models;
+    
+    private Dictionary<Uid, IResource> GetResources() => _scenes[_currentSceneIndex].Resources;
 
     private void ShowFps(double time)
     {
@@ -118,5 +126,18 @@ public partial class TyzeWindow
         _time = 0.0;
         _frames = 0;
     }
+
+    private void InitializeAudio()
+    {
+        var attribute = 1;
+        _device = ALC.OpenDevice(null);
+        _context = ALC.CreateContext(_device, ref attribute);
     
+        ALC.MakeContextCurrent(_context);
+    
+        var version = AL.Get(ALGetString.Version);
+        var vendor = AL.Get(ALGetString.Vendor);
+        var renderer = AL.Get(ALGetString.Renderer);
+        Console.WriteLine(version + "\r\n" + vendor + "\r\n" + renderer);
+    }
 }

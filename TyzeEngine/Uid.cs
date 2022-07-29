@@ -8,6 +8,10 @@ public readonly struct Uid : IEquatable<Uid>
 
     public Uid() => Value = Generate();
 
+    public Uid(uint value) => Value = value;
+
+    public Uid(int value) => Value = value < 0 ? Generate() : (uint)value;
+
     public static uint Generate()
     {
         var random = new Random();
@@ -23,8 +27,9 @@ public readonly struct Uid : IEquatable<Uid>
 
     public override int GetHashCode() => (int)Value;
 
+    public override string ToString() => Value.ToString();
+
     public static bool operator ==(Uid left, Uid right) => left.Equals(right);
 
     public static bool operator !=(Uid left, Uid right) => !left.Equals(right);
-    
 }

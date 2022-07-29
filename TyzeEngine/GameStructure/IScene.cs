@@ -13,7 +13,8 @@ public interface IScene
     bool LoadError { get; }
     ILighting Lighting { get; }
     IPlace CurrentPlace { get; }
-    List<IResource> Resources { get; }
+    Dictionary<Uid, IResource> Resources { get; }
+    Dictionary<Uid, IModel> Models { get; }
     TriggerHandler ReloadObjects { get; set; }
     TriggerHandler LoadSceneHandler { get; set; }
 

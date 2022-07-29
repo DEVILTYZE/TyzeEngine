@@ -41,7 +41,18 @@ public static class Constants
     internal static readonly Vector3 DefaultPosition = new(0, 0, 0);
     internal static readonly Vector3 DefaultSize = new(1, 1, 1);
     internal static readonly Vector3 DefaultSize2D = new(1, 1, 0);
-    internal static readonly Vector4 DefaultColor = new(.5f, .5f, .5f, 1f);
+    internal static readonly Vector3 DefaultRotation = new(0, 0, 0);
+    internal static readonly Vector4 DefaultColor = new(.5f, .5f, .5f, 1);
+    internal static readonly Vector4 NullColor = new(0, 0, 0, 0);
+    
+    // AUDIO
+    public const int Frequency441 = 44100;
+    public const int Frequency48 = 48000;
+    public const int BitDepth8 = 8;
+    public const int BitDepth16 = BitDepth8 * 2;
+    public const int BitDepth24 = BitDepth8 * 3;
+    public const int BitDepth32 = BitDepth8 * 4;
+    public const float Duration = .75f;
 
     public static readonly string[] ImageExtensions = { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".ico", ".tiff", ".svg" };
     public static readonly string[] AudioExtensions = { ".mp3", ".wav", ".flac", ".aiff" };

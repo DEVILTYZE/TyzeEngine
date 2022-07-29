@@ -8,16 +8,12 @@ namespace TyzeEngine.Resources;
 
 public sealed class Texture : Resource
 {
-    private bool _disposed;
-    
-    public int Handle { get; private set; }
     public bool IsEnabled { get; private set; }
     public TextureUnit Unit { get; set; }
 
     public Texture(string path) : base(path)
     {
         Unit = TextureUnit.Texture0;
-        Handle = -1;
         IsEnabled = false;
     }
 
@@ -78,10 +74,10 @@ public sealed class Texture : Resource
 
     protected override void Dispose(bool disposing)
     {
-        if (_disposed) 
+        if (Disposed) 
             return;
         
         Disable();
-        _disposed = true;
+        Disposed = true;
     }
 }

@@ -6,6 +6,7 @@ namespace TyzeEngine.Resources;
 public interface IResource
 {
     Uid Id { get; }
+    int Handle { get; }
     string Path { get; }
     bool LoadError { get; }
 
