@@ -6,11 +6,11 @@ namespace TyzeEngine.Objects;
 
 public abstract class ComplexObject : GameObject, IComplexObject
 {
-    public List<IGameObject> Objects { get; }
+    public List<IGameObject> GameObjects { get; }
 
-    protected ComplexObject(Uid modelId, IReadOnlyList<Uid> resourceIds, IObjectPhysics physics, List<IGameObject> objects) 
+    protected ComplexObject(Uid modelId, IReadOnlyList<Uid> resourceIds, IBody physics, List<IGameObject> objects) 
         : base(modelId, resourceIds, physics)
     {
-        Objects = objects;
+        GameObjects = objects;
     }
 }

@@ -57,7 +57,7 @@ public record struct SaveGameObjectData
 public abstract class GameObject : IGameObject, ISaveable, ICloneable, IDisposable
 {
     private bool _disposed;
-    private IObjectPhysics _physics;
+    private IBody _physics;
 
     ArrayObject IGameObject.ArrayObject { get; set; }
 
@@ -65,32 +65,35 @@ public abstract class GameObject : IGameObject, ISaveable, ICloneable, IDisposab
     {
         get
         {
-            if (!SaveStatus && (!Physics.IsEnabled || Physics.GravityForce.Length <= 0))
+            if (!SaveStatus)
                 return BufferUsageHint.StaticDraw;
             
             if (Visibility is VisibilityType.Collapsed or VisibilityType.Hidden)
                 return BufferUsageHint.StaticDraw;
 
-            if (Physics.IsEnabled && Physics.GravityForce.Length > 0)
+            if (Body.IsEnabled && Body.Force.Length > 0)
                 return BufferUsageHint.DynamicDraw;
 
-            if (Scripts.Count > 0 && Triggers.Count > 0)
-                return BufferUsageHint.StreamDraw;
-
-            return BufferUsageHint.DynamicDraw;
+            return Scripts.Count switch
+            {
+                > 0 when Triggers.Count > 0 => BufferUsageHint.StreamDraw,
+                > 0 when Triggers.Count == 0 => BufferUsageHint.DynamicDraw,
+                0 when Triggers.Count > 0 => BufferUsageHint.DynamicDraw,
+                _ => BufferUsageHint.StaticDraw
+            };
         }
     }
 
-    public Uid Id { get; protected init; }
-    public Uid ModelId { get; private set; }
+    public Uid Id { get; }
+    public Uid ModelId { get; }
     public IReadOnlyList<Uid> ResourceIds { get; private set; }
 
-    public IObjectPhysics Physics
+    public IBody Body
     {
         get => _physics;
         set
         {
-            value.Object = this;
+            value.GameObject = this;
             _physics = value.Clone();
         }
     }
@@ -102,15 +105,15 @@ public abstract class GameObject : IGameObject, ISaveable, ICloneable, IDisposab
     public Vector3 Rotation { get; private set; }
     public Vector4 Color { get; private set; }
     public bool HasTexture { get; private set; }
-    public VisibilityType Visibility { get; private set; }
+    public VisibilityType Visibility { get; set; }
     public bool SaveStatus { get; }
 
-    protected GameObject(Uid modelId, IReadOnlyList<Uid> resourceIds = null, IObjectPhysics physics = null, bool notSave = false)
+    protected GameObject(Uid modelId, IReadOnlyList<Uid> resourceIds = null, IBody physics = null, bool notSave = false)
     {
         Id = new Uid();
         ModelId = modelId;
-        Physics = physics is null ? new RectanglePhysics() : physics.Clone();
-        Physics.Object = this;
+        Body = physics is null ? new RectanglePhysics() : physics.Clone();
+        Body.GameObject = this;
         SaveStatus = !notSave;
         ResourceIds = resourceIds is null ? new List<Uid>() : resourceIds.ToList();
         Triggers = new List<ITrigger>();
@@ -124,7 +127,7 @@ public abstract class GameObject : IGameObject, ISaveable, ICloneable, IDisposab
             ResourceIds = resourceIds.ToList();
     }
 
-    protected GameObject(SaveGameObjectData saveData, IObjectPhysics physics = null, bool notSave = false) 
+    protected GameObject(SaveGameObjectData saveData, IBody physics = null, bool notSave = false) 
         : this(saveData.ModelId, saveData.ResourceIds, physics, notSave)
     {
         Id = saveData.Id;
@@ -139,9 +142,9 @@ public abstract class GameObject : IGameObject, ISaveable, ICloneable, IDisposab
     
     ~GameObject() => Dispose(false);
     
-    public void TranslateTo(float x, float y, float z) => Position = new Vector3(x, y, z);
+    public void SetPosition(float x, float y, float z) => Position = new Vector3(x, y, z);
 
-    public void ScaleTo(float x, float y, float z)
+    public void SetScale(float x, float y, float z)
     {
         if (x < 0 || y < 0 || z < 0)
             return;
@@ -149,15 +152,15 @@ public abstract class GameObject : IGameObject, ISaveable, ICloneable, IDisposab
         Size = new Vector3(x, y, z);
     }
 
-    public void RotateTo(float x, float y, float z) => Rotation = new Vector3(x, y, z);
+    public void SetRotation(float x, float y, float z) => Rotation = new Vector3(x, y, z);
 
-    public void Translate(float x, float y, float z) => TranslateTo(Position.X + x, Position.Y + y, Position.Z + z);
+    public void Translate(float x, float y, float z) => SetPosition(Position.X + x, Position.Y + y, Position.Z + z);
 
-    public void Scale(float x, float y, float z) => ScaleTo(Size.X * x, Size.Y * y, Size.Z * z);
+    public void Scale(float x, float y, float z) => SetScale(Size.X * x, Size.Y * y, Size.Z * z);
 
-    public void Rotate(float x, float y, float z) => RotateTo(Rotation.X + x, Rotation.Y + y, Rotation.Z + z);
+    public void Rotate(float x, float y, float z) => SetRotation(Rotation.X + x, Rotation.Y + y, Rotation.Z + z);
 
-    public void ChangeColor(byte r, byte g, byte b, byte a) => Color = new Vector4(
+    public void SetColor(byte r, byte g, byte b, byte a) => Color = new Vector4(
         (float)r / byte.MaxValue, 
         (float)g / byte.MaxValue, 
         (float)b / byte.MaxValue,
@@ -165,15 +168,13 @@ public abstract class GameObject : IGameObject, ISaveable, ICloneable, IDisposab
     );
 
     public void RemoveColor() => Color = Constants.NullColor;
-    public void ChangeTextureStatus(bool isEnabled, bool withColor = false)
+    public void SetTextureStatus(bool isEnabled, bool withColor = false)
     {
         HasTexture = isEnabled;
         
         if (!withColor)
             RemoveColor();
     }
-
-    public void ChangeVisibility(VisibilityType newType) => Visibility = newType;
 
     public void EnableResources(Dictionary<Uid, IResource> resources)
     {

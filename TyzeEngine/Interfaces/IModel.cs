@@ -1,4 +1,6 @@
-﻿namespace TyzeEngine.Interfaces;
+﻿using OpenTK.Mathematics;
+
+namespace TyzeEngine.Interfaces;
 
 public interface IModel
 {
@@ -9,4 +11,5 @@ public interface IModel
 
     void Load();
     (float[], uint[]) GetVectorArray(IGameObject obj);
+    float GetVolume(Vector3 scale);
 }

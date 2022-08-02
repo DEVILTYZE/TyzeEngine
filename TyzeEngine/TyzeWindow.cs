@@ -11,7 +11,7 @@ using TyzeEngine.Interfaces;
 
 namespace TyzeEngine;
 
-public partial class TyzeWindow : GameWindow
+public sealed partial class TyzeWindow : GameWindow
 {
     private readonly IReadOnlyList<IScene> _scenes;
     private int _currentSceneIndex;
@@ -74,7 +74,7 @@ public partial class TyzeWindow : GameWindow
         
         ShowFps(args.Time);
         _shader.Enable();
-        DrawObjects();
+        DrawObjects((float)args.Time);
         _shader.Disable();
 
         SwapBuffers();

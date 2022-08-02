@@ -93,8 +93,9 @@ public class Audio : Resource
 
     private void Play()
     {
+        Disable();
         AL.SourcePlay(Handle);
         Thread.Sleep((int)(_duration * Constants.Duration));
-        AL.SourceStop(Handle);
+        Disable();
     }
 }

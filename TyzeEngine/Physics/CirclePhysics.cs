@@ -3,24 +3,22 @@ using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Physics;
 
-public class CirclePhysics : ObjectPhysics
+public class CirclePhysics : Body
 {
     public Vector3 Center { get; }
     public float Radius { get; }
     
-    public CirclePhysics(float mass, float restitution, Vector3 gravityForce, Vector3 velocity, 
-        bool isEnabled, Vector3 center, float radius) 
-        : base(mass, restitution, gravityForce, velocity, isEnabled)
+    public CirclePhysics(IMaterial material, float volume, float gravityScale, bool isEnabled, Vector3 center, float radius) 
+        : base(material, volume, gravityScale, isEnabled)
     {
         Center = center;
         Radius = radius;
-        CollisionMethods.Add(typeof(CirclePhysics), PhysicsGenerator.CircleWithCircle);
+        AddMethod(typeof(CirclePhysics), PhysicsGenerator.CircleWithCircle);
     }
 
     public override CollisionEventArgs IsCollisionWith(IGameObject thisObj, IGameObject otherObj) 
-        => CollisionMethods[otherObj.Physics.GetType()].Invoke(thisObj, otherObj);
+        => CollisionMethods[otherObj.Body.GetType()].Invoke(thisObj, otherObj);
 
-    public override IObjectPhysics Clone() => new CirclePhysics(1 / InverseMass, Restitution, GravityForce, 
-        Velocity, IsEnabled, Center, Radius);
+    public override IBody Clone() => new CirclePhysics(ObjectMaterial, Volume, GravityScale, IsEnabled, Center, Radius);
 }
 

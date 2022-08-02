@@ -5,7 +5,7 @@ using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Physics;
 
-public class RectanglePhysics : ObjectPhysics
+public class RectanglePhysics : Body
 {
     private readonly Vector3 _d;
     private Vector3 _a, _b, _c;
@@ -15,28 +15,26 @@ public class RectanglePhysics : ObjectPhysics
     public float MinX { get; private set; }
     public float MinY { get; private set; }
 
-    public RectanglePhysics() 
-        : base(0, 0, Vector3.Zero, Vector3.Zero, false)
+    public RectanglePhysics() : base(Material.Static, 0, 0, false)
     {
     }
     
-    public RectanglePhysics(float mass, float restitution, Vector3 gravityForce, Vector3 velocity, 
-        bool isEnabled, IReadOnlyList<Vector3> points) 
-        : base(mass, restitution, gravityForce, velocity, isEnabled)
+    public RectanglePhysics(IMaterial material, float volume, float gravityScale, bool isEnabled, IReadOnlyList<Vector3> points) 
+        : base(material, volume, gravityScale, isEnabled)
     {
         _a = points[0];
         _b = points[1];
         _c = points[2];
         _d = points[3];
         CreateNewRectangle();
-        CollisionMethods.Add(typeof(RectanglePhysics), PhysicsGenerator.RectangleWithRectangle);
+        AddMethod(typeof(RectanglePhysics), PhysicsGenerator.RectangleWithRectangle);
     }
     
     public override CollisionEventArgs IsCollisionWith(IGameObject thisObj, IGameObject otherObj) 
-        => CollisionMethods[otherObj.Physics.GetType()].Invoke(thisObj, otherObj);
+        => CollisionMethods[otherObj.Body.GetType()].Invoke(thisObj, otherObj);
 
-    public override IObjectPhysics Clone() => new RectanglePhysics(1 / InverseMass, Restitution, GravityForce, 
-        Velocity, IsEnabled, new[] { _a, _b, _c, _d });
+    public override IBody Clone() => new RectanglePhysics(ObjectMaterial, Volume, GravityScale, IsEnabled, 
+        new[] { _a, _b, _c, _d });
 
     private void CreateNewRectangle()
     {

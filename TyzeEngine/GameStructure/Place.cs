@@ -11,14 +11,14 @@ public class Place : IPlace, IDisposable
     
     public int Id { get; }
     public IReadOnlyList<IPlace> NeighbourPlaces { get; set; }
-    public List<IGameObject> Objects { get; }
+    public List<IGameObject> GameObjects { get; }
     public bool Loaded { get; set; }
 
     public Place(int id, IReadOnlyList<IPlace> neighbourPlaces, List<IGameObject> objects)
     {
         Id = id;
         NeighbourPlaces = neighbourPlaces;
-        Objects = objects;
+        GameObjects = objects;
         Loaded = false;
     }
 
@@ -31,7 +31,7 @@ public class Place : IPlace, IDisposable
     }
 
     IEnumerable<Uid> IPlace.GetResourceIds() 
-        => Objects.SelectMany(obj => obj.ResourceIds ?? ArraySegment<Uid>.Empty);
+        => GameObjects.SelectMany(obj => obj.ResourceIds ?? ArraySegment<Uid>.Empty);
 
     protected virtual void Dispose(bool disposing)
     {
@@ -44,7 +44,7 @@ public class Place : IPlace, IDisposable
         
         NeighbourPlaces = null;
 
-        foreach (var obj in Objects)
+        foreach (var obj in GameObjects)
             (obj as IDisposable)?.Dispose();
 
         _disposed = true;

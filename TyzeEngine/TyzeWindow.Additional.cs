@@ -9,7 +9,7 @@ using TyzeEngine.Resources;
 
 namespace TyzeEngine;
 
-public partial class TyzeWindow
+public sealed partial class TyzeWindow
 {
     private double _time;
     private int _frames;
@@ -26,6 +26,10 @@ public partial class TyzeWindow
         {
             // Создание нового Array object для каждого игрового объекта.
             obj.ArrayObject = new ArrayObject();
+            
+            if (obj.Visibility is VisibilityType.Collapsed or VisibilityType.Hidden)
+                continue;
+            
             obj.ArrayObject.Enable();
             // Получение точек позиции объекта в пространстве, текстуры в пространстве и цвета в виде массива float
             // и получение массива uint для Element object.
@@ -61,7 +65,7 @@ public partial class TyzeWindow
         }
     }
 
-    private void DrawObjects()
+    private void DrawObjects(float time)
     {
         Matrix4 GetMatrix(IGameObject obj)
         {
@@ -69,6 +73,8 @@ public partial class TyzeWindow
             var rotationX = scale * Matrix4.CreateRotationX(obj.Rotation.X);
             var rotationY = rotationX * Matrix4.CreateRotationY(obj.Rotation.Y);
             var rotationZ = rotationY * Matrix4.CreateRotationZ(obj.Rotation.Z);
+            var (x, y, z) = (obj.Body.Velocity + obj.Body.Force) * time;
+            obj.Translate(x, y, z);
             
             return rotationZ * Matrix4.CreateTranslation(obj.Position);
         }
@@ -81,7 +87,7 @@ public partial class TyzeWindow
         }
         
         var objects = GetObjects(false).ToList();
-
+        
         foreach (var obj in objects)
         {
             obj.ArrayObject.Enable();
@@ -91,7 +97,9 @@ public partial class TyzeWindow
             obj.DisableResources(GetResources());
         }
         
-        PhysicsGenerator.Collision2D(objects.ToList());
+        objects = objects.Where(obj => obj.Body.IsEnabled).ToList();
+        PhysicsGenerator.Collision2D(objects);
+        PhysicsGenerator.Gravity(objects);
     }
 
     private void LoadScene(TriggeredEventArgs args) => _currentSceneIndex = (int)args.Data;
@@ -101,10 +109,10 @@ public partial class TyzeWindow
         var currentPlace = _scenes[_currentSceneIndex].CurrentPlace;
 
         if (!unloaded)
-            return new[] { currentPlace }.Concat(currentPlace.NeighbourPlaces).SelectMany(place => place.Objects);
+            return new[] { currentPlace }.Concat(currentPlace.NeighbourPlaces).SelectMany(place => place.GameObjects);
 
         var objects = LoadQueue.TakeObjects().ToArray();
-        currentPlace.Objects.AddRange(objects);
+        currentPlace.GameObjects.AddRange(objects);
         _scenes[_currentSceneIndex].LoadResources();
 
         return objects;

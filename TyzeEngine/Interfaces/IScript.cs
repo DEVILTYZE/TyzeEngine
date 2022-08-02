@@ -5,7 +5,7 @@ namespace TyzeEngine.Interfaces;
 
 public interface IScript
 {
-    IGameObject Object { get; }
+    IGameObject GameObject { get; }
     KeyboardState KeyboardState { get; }
     IScene Scene { get; }
 

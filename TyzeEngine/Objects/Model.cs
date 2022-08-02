@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Objects;
@@ -124,7 +125,12 @@ public class Model : IModel, IDisposable
                 : (GetArrays(_texture.GetArray(), colorArray, true), _indices)
         };
     }
-    
+
+    public float GetVolume(Vector3 scale)
+    {
+        throw new NotImplementedException();
+    }
+
     public void Dispose()
     {
         Dispose(true);

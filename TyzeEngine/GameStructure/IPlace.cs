@@ -8,7 +8,7 @@ public interface IPlace
 {
     int Id { get; }
     IReadOnlyList<IPlace> NeighbourPlaces { get; set; }
-    List<IGameObject> Objects { get; }
+    List<IGameObject> GameObjects { get; }
     bool Loaded { get; set; }
 
     internal IEnumerable<Uid> GetResourceIds();
