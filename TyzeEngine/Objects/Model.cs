@@ -86,7 +86,7 @@ public class Model : IModel, IDisposable
 
     public (float[], uint[]) GetVectorArray(IGameObject obj)
     {
-        _texture = obj.HasTexture 
+        _texture = obj.Body.HasTexture 
             ? new VectorArray(DefaultModels.GetDefaultTexture(_vertices), ArrayType.TwoDimensions) 
             : null;
         
@@ -114,9 +114,9 @@ public class Model : IModel, IDisposable
         }
         
         var texture = new[] { -1f, -1f };
-        var colorArray = new[] { obj.Color.X, obj.Color.Y, obj.Color.Z, obj.Color.W };
+        var colorArray = new[] { obj.Body.Color.X, obj.Body.Color.Y, obj.Body.Color.Z, obj.Body.Color.W };
 
-        return obj.Visibility switch
+        return obj.Body.Visibility switch
         {
             VisibilityType.Hidden => (GetArrays(texture, new[] { 0f, 0, 0, 0 }, false), _indices),
             VisibilityType.Collapsed => (new[] { 0f, 0, 0, -1, -1, 0, 0, 0, 0 }, new uint[] { 1 }),

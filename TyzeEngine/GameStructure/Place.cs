@@ -31,7 +31,7 @@ public class Place : IPlace, IDisposable
     }
 
     IEnumerable<Uid> IPlace.GetResourceIds() 
-        => GameObjects.SelectMany(obj => obj.ResourceIds ?? ArraySegment<Uid>.Empty);
+        => GameObjects.SelectMany(obj => obj.ResourceIds ?? new List<Uid>());
 
     protected virtual void Dispose(bool disposing)
     {

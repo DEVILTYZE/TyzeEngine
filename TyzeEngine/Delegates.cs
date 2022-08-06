@@ -1,6 +1,7 @@
 ﻿using System;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
+using TyzeEngine.Physics;
 
 namespace TyzeEngine;
 
@@ -16,18 +17,22 @@ public class TriggeredEventArgs : EventArgs
 
 public class CollisionEventArgs : EventArgs
 {
-    public IGameObject ThisObject { get; }
-    public IGameObject OtherObject { get; }
-    public Vector3 Normal { get; internal set; }
-    public float Penetration { get; internal set; }
-    public bool IsCollides { get; internal set; }
+    public IBody BodyA { get; }
+    public IBody BodyB { get; }
+    public Vector3 Normal { get; set; }
+    public float Penetration { get; set; }
+    public bool IsCollides { get; set; }
+    public Vector3[] Contacts { get; }
+    public int ContactsCount { get; set; }
 
-    public CollisionEventArgs(IGameObject thisObject, IGameObject otherObject)
+    public CollisionEventArgs(IBody bodyA, IBody bodyB)
     {
-        ThisObject = thisObject;
-        OtherObject = otherObject;
+        BodyA = bodyA;
+        BodyB = bodyB;
         Normal = Vector3.Zero;
         Penetration = 0;
         IsCollides = false;
+        Contacts = new Vector3[2];
+        ContactsCount = 0;
     }
 }

@@ -5,45 +5,37 @@ using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Objects;
 
-public class Trigger : ITrigger, ISaveable
+public class Trigger : ITrigger
 {
     private readonly int _placeId;
 
     protected event TriggerHandler Triggered;
     
-    public int Id { get; }
+    public Uid Id { get; }
     public bool IsTriggered { get; set; }
     public bool SaveStatus { get; }
 
-    private Trigger(int id, bool notSave)
+    private Trigger(bool notSave)
     {
-        Id = id;
+        Id = new Uid();
         SaveStatus = !notSave;
     }
 
-    public Trigger(int id, IScene scene, int placeId, bool notSave = false) : this(id, notSave)
+    public Trigger(IScene scene, int placeId, bool notSave = false) : this(notSave)
     {
         _placeId = placeId;
         Triggered += scene.LoadPlace;
     }
 
-    public Trigger(int id, IScript script, bool notSave = false) : this(id, notSave)
+    public Trigger(IScript script, bool notSave = false) : this(notSave)
     {
         _placeId = -1;
         Triggered += script.Execute;
     }
 
-    public byte[] GetSaveData()
+    public virtual void OnTriggered()
     {
-        var id = BitConverter.GetBytes(Id);
-        var isTriggered = BitConverter.GetBytes(IsTriggered);
-
-        return id.Concat(isTriggered).ToArray();
-    }
-
-    protected virtual void OnTriggered()
-    {
-        Triggered?.Invoke(new TriggeredEventArgs(_placeId));
+        Triggered?.Invoke(new TriggeredEventArgs(_placeId == -1 ? null : _placeId));
         IsTriggered = true;
     }
 }

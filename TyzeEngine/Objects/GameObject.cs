@@ -1,63 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using OpenTK.Graphics.OpenGL4;
-using OpenTK.Mathematics;
-using TyzeEngine.GameStructure;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Physics;
 using TyzeEngine.Resources;
 
 namespace TyzeEngine.Objects;
 
-public record struct SaveGameObjectData
-{
-    public Uid Id { get; }
-    public Uid[] ResourceIds { get; }
-    public Uid ModelId { get; }
-    public Dictionary<int, bool> TriggerDictionary { get; }
-    public Vector3 Position { get; }
-    public Vector3 Size { get; }
-    public Vector3 Rotation { get; }
-    public Vector4 Color { get; }
-
-    public SaveGameObjectData(Uid[] resourceIds, byte[] data)
-    {
-        const int count = 4;
-        ResourceIds = resourceIds;
-        Id = new Uid(BitConverter.ToUInt32(data));
-        ModelId = new Uid(BitConverter.ToUInt32(data, sizeof(int)));
-        var triggersCount = BitConverter.ToInt32(data, sizeof(int) * 2);
-        TriggerDictionary = new Dictionary<int, bool>(triggersCount);
-        
-        for (var i = 0; i < triggersCount; ++i)
-        {
-            var intIndex = i * Constants.SizeOfTrigger + 3 * sizeof(int);
-            var boolIndex = i * Constants.SizeOfTrigger + 4 * sizeof(int);
-            TriggerDictionary.Add(BitConverter.ToInt32(data, intIndex), BitConverter.ToBoolean(data, boolIndex));
-        }
-
-        var str = Encoding.UTF8.GetString(data[(sizeof(int) * 3 + Constants.SizeOfTrigger * triggersCount)..]);
-        var parts = str.Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
-        var name = parts[0][8..];
-        var floatArray = new List<float[]>(count);
-        
-        for (var i = 0; i < count; ++i)
-            floatArray.Add(parts[i + 1].Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .Select(float.Parse).ToArray());
-        
-        Position = new Vector3(floatArray[0][0], floatArray[0][1], floatArray[0][2]);
-        Size = new Vector3(floatArray[1][0], floatArray[1][1], floatArray[1][2]);
-        Rotation = new Vector3(floatArray[2][0], floatArray[2][1], floatArray[2][2]);
-        Color = new Vector4(floatArray[3][0], floatArray[3][1], floatArray[3][2], floatArray[3][3]);
-    }
-}
-
-public abstract class GameObject : IGameObject, ISaveable, ICloneable, IDisposable
+public abstract class GameObject : IGameObject, IDisposable
 {
     private bool _disposed;
-    private IBody _physics;
+    private IBody _body;
 
     ArrayObject IGameObject.ArrayObject { get; set; }
 
@@ -68,7 +22,7 @@ public abstract class GameObject : IGameObject, ISaveable, ICloneable, IDisposab
             if (!SaveStatus)
                 return BufferUsageHint.StaticDraw;
             
-            if (Visibility is VisibilityType.Collapsed or VisibilityType.Hidden)
+            if (Body.Visibility is VisibilityType.Collapsed or VisibilityType.Hidden)
                 return BufferUsageHint.StaticDraw;
 
             if (Body.IsEnabled && Body.Force.Length > 0)
@@ -86,95 +40,56 @@ public abstract class GameObject : IGameObject, ISaveable, ICloneable, IDisposab
 
     public Uid Id { get; }
     public Uid ModelId { get; }
-    public IReadOnlyList<Uid> ResourceIds { get; private set; }
+    public List<Uid> ResourceIds { get; private set; }
 
     public IBody Body
     {
-        get => _physics;
+        get => _body;
         set
         {
             value.GameObject = this;
-            _physics = value.Clone();
+            _body = value.Clone();
         }
     }
     
     public List<ITrigger> Triggers { get; }
     public List<IScript> Scripts { get; }
-    public Vector3 Position { get; private set; }
-    public Vector3 Size { get; private set; }
-    public Vector3 Rotation { get; private set; }
-    public Vector4 Color { get; private set; }
-    public bool HasTexture { get; private set; }
-    public VisibilityType Visibility { get; set; }
     public bool SaveStatus { get; }
 
-    protected GameObject(Uid modelId, IReadOnlyList<Uid> resourceIds = null, IBody physics = null, bool notSave = false)
+    protected GameObject(Uid modelId, IReadOnlyList<Uid> resourceIds = null, IBody body = null, bool notSave = false)
     {
         Id = new Uid();
         ModelId = modelId;
-        Body = physics is null ? new RectanglePhysics() : physics.Clone();
+        Body = body is null ? new RectangleBody() : body.Clone();
         Body.GameObject = this;
         SaveStatus = !notSave;
         ResourceIds = resourceIds is null ? new List<Uid>() : resourceIds.ToList();
         Triggers = new List<ITrigger>();
         Scripts = new List<IScript>();
-        Position = Constants.DefaultPosition;
-        Size = Constants.DefaultSize2D;
-        Rotation = Constants.DefaultRotation;
-        Color = Constants.DefaultColor;
         
         if (resourceIds is not null) 
             ResourceIds = resourceIds.ToList();
     }
 
-    protected GameObject(SaveGameObjectData saveData, IBody physics = null, bool notSave = false) 
-        : this(saveData.ModelId, saveData.ResourceIds, physics, notSave)
+    protected GameObject(SaveGameObjectData saveData, IBody body, bool notSave = false) 
+        : this(saveData.ModelId, saveData.ResourceIds, body, notSave)
     {
         Id = saveData.Id;
-        Position = saveData.Position;
-        Size = saveData.Size;
-        Rotation = saveData.Rotation;
-        Color = saveData.Color;
+        Body = Activator.CreateInstance(Constants.AssemblyName, saveData.BodyName) as IBody;
+        
+        if (Body is not null)
+        {
+            Body.SetPosition(saveData.Position.X, saveData.Position.Y, saveData.Position.Z);
+            Body.SetScale(saveData.Size.X, saveData.Size.Y, saveData.Size.Z);
+            Body.SetRotation(saveData.Rotation.X, saveData.Rotation.Y, saveData.Rotation.Z);
+            Body.SetColor(saveData.Color);
+        }
         
         foreach (var trigger in Triggers.Where(trigger => saveData.TriggerDictionary.ContainsKey(trigger.Id)))
             trigger.IsTriggered = saveData.TriggerDictionary[trigger.Id];
     }
     
     ~GameObject() => Dispose(false);
-    
-    public void SetPosition(float x, float y, float z) => Position = new Vector3(x, y, z);
-
-    public void SetScale(float x, float y, float z)
-    {
-        if (x < 0 || y < 0 || z < 0)
-            return;
-
-        Size = new Vector3(x, y, z);
-    }
-
-    public void SetRotation(float x, float y, float z) => Rotation = new Vector3(x, y, z);
-
-    public void Translate(float x, float y, float z) => SetPosition(Position.X + x, Position.Y + y, Position.Z + z);
-
-    public void Scale(float x, float y, float z) => SetScale(Size.X * x, Size.Y * y, Size.Z * z);
-
-    public void Rotate(float x, float y, float z) => SetRotation(Rotation.X + x, Rotation.Y + y, Rotation.Z + z);
-
-    public void SetColor(byte r, byte g, byte b, byte a) => Color = new Vector4(
-        (float)r / byte.MaxValue, 
-        (float)g / byte.MaxValue, 
-        (float)b / byte.MaxValue,
-        (float)a / byte.MaxValue
-    );
-
-    public void RemoveColor() => Color = Constants.NullColor;
-    public void SetTextureStatus(bool isEnabled, bool withColor = false)
-    {
-        HasTexture = isEnabled;
-        
-        if (!withColor)
-            RemoveColor();
-    }
 
     public void EnableResources(Dictionary<Uid, IResource> resources)
     {
@@ -187,30 +102,17 @@ public abstract class GameObject : IGameObject, ISaveable, ICloneable, IDisposab
         foreach (var id in ResourceIds)
             resources[id].Disable();
     }
-
-    public byte[] GetSaveData()
-    {
-        var id = BitConverter.GetBytes(Id.Value);
-        var modelId = Encoding.UTF8.GetBytes(ModelId.ToString());
-        var triggerList = Triggers.Where(trigger => ((ISaveable)trigger).SaveStatus).ToList();
-        var triggerCount = BitConverter.GetBytes(triggerList.Count);
-        var triggers = triggerList.SelectMany(trigger => ((ISaveable)trigger).GetSaveData()).ToArray();
-        var objectInfo = Encoding.UTF8.GetBytes(ToString());
-
-        return id.Concat(modelId).Concat(triggerCount).Concat(triggers).Concat(objectInfo).ToArray();
-    }
     
     public override string ToString()
         => $"object: {Id.Value}\r\n" + 
-           string.Join(' ', Position) + "\r\n" + 
-           string.Join(' ', Size) + "\r\n" + 
-           string.Join(' ', Rotation) + "\r\n" +
-           string.Join(' ', Color) + 
+           string.Join(' ', Body.Position) + "\r\n" + 
+           string.Join(' ', Body.Size) + "\r\n" + 
+           string.Join(' ', Body.Rotation) + "\r\n" +
+           string.Join(' ', Body.Color) + "\r\n" +
+           Body.GetType().Name +
            "\r\nend object;";
 
-    object ICloneable.Clone() => Clone();
-
-    protected abstract IGameObject Clone();
+    public abstract IGameObject Clone();
 
     public void Dispose()
     {
@@ -225,7 +127,7 @@ public abstract class GameObject : IGameObject, ISaveable, ICloneable, IDisposab
 
         if (disposing)
         {
-            // something...
+            ((IGameObject)this).ArrayObject.Dispose();
         }
 
         ResourceIds = null;

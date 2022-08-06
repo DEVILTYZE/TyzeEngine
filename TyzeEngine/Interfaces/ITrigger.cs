@@ -4,6 +4,9 @@ namespace TyzeEngine.Interfaces;
 
 public interface ITrigger
 {
-    int Id { get; }
+    Uid Id { get; }
     bool IsTriggered { get; set; }
+    bool SaveStatus { get; }
+
+    void OnTriggered();
 }

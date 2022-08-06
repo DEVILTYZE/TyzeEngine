@@ -27,7 +27,7 @@ public sealed partial class TyzeWindow
             // Создание нового Array object для каждого игрового объекта.
             obj.ArrayObject = new ArrayObject();
             
-            if (obj.Visibility is VisibilityType.Collapsed or VisibilityType.Hidden)
+            if (obj.Body.Visibility is VisibilityType.Collapsed or VisibilityType.Hidden)
                 continue;
             
             obj.ArrayObject.Enable();
@@ -67,20 +67,26 @@ public sealed partial class TyzeWindow
 
     private void DrawObjects(float time)
     {
-        Matrix4 GetMatrix(IGameObject obj)
+        Matrix4 GetMatrix(IBody body)
         {
-            var scale = Matrix4.Identity * Matrix4.CreateScale(obj.Size);
-            var rotationX = scale * Matrix4.CreateRotationX(obj.Rotation.X);
-            var rotationY = rotationX * Matrix4.CreateRotationY(obj.Rotation.Y);
-            var rotationZ = rotationY * Matrix4.CreateRotationZ(obj.Rotation.Z);
-            var (x, y, z) = (obj.Body.Velocity + obj.Body.Force) * time;
-            obj.Translate(x, y, z);
+            // SCALE
+            var scale = Matrix4.Identity * Matrix4.CreateScale(body.Size);
             
-            return rotationZ * Matrix4.CreateTranslation(obj.Position);
+            // ROTATION
+            var rotationX = scale * Matrix4.CreateRotationX(body.Rotation.X);
+            var rotationY = rotationX * Matrix4.CreateRotationY(body.Rotation.Y);
+            var rotationZ = rotationY * Matrix4.CreateRotationZ(body.Rotation.Z);
+            
+            // TRANSLATION
+            body.AddVelocity((body.Force + body.GravityForce) * time);
+            var (x, y, z) = body.Velocity * time;
+            body.Translate(x, y, z);
+            
+            return rotationZ * Matrix4.CreateTranslation(body.Position);
         }
         void SetMatrices(IGameObject obj)
         {
-            var model = GetMatrix(obj);
+            var model = GetMatrix(obj.Body);
             _shader.SetMatrix4("model", model);
             _shader.SetMatrix4("view", _view);
             _shader.SetMatrix4("projection", _projection);
@@ -99,7 +105,6 @@ public sealed partial class TyzeWindow
         
         objects = objects.Where(obj => obj.Body.IsEnabled).ToList();
         PhysicsGenerator.Collision2D(objects);
-        PhysicsGenerator.Gravity(objects);
     }
 
     private void LoadScene(TriggeredEventArgs args) => _currentSceneIndex = (int)args.Data;
