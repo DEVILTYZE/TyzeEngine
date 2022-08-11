@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
+using TyzeEngine.Objects;
 
 namespace TyzeEngine;
 
@@ -15,7 +16,7 @@ public readonly record struct SaveGameObjectData // TODO: SAVE BODY TYPE
     
     public Uid Id { get; }
     public Uid[] ResourceIds { get; }
-    public Uid ModelId { get; }
+    public IModel Model { get; }
     public Dictionary<Uid, bool> TriggerDictionary { get; }
     public Vector3 Position { get; }
     public Vector3 Size { get; }
@@ -27,12 +28,12 @@ public readonly record struct SaveGameObjectData // TODO: SAVE BODY TYPE
     {
         Id = obj.Id;
         ResourceIds = obj.ResourceIds.ToArray();
-        ModelId = obj.ModelId;
+        Model = obj.Model;
         var triggerList = obj.Triggers.Where(trigger => trigger.SaveStatus).ToList();
         TriggerDictionary = new Dictionary<Uid, bool>(triggerList.Select(trigger 
             => new KeyValuePair<Uid, bool>(trigger.Id, trigger.IsTriggered)));
         Position = obj.Body.Position;
-        Size = obj.Body.Size;
+        Size = obj.Body.Scale;
         Rotation = obj.Body.Rotation;
         Color = obj.Body.Color;
         BodyName = obj.Body.GetType().ToString();
@@ -44,7 +45,8 @@ public readonly record struct SaveGameObjectData // TODO: SAVE BODY TYPE
         const int count = 4;
         ResourceIds = resourceIds;
         Id = new Uid(BitConverter.ToUInt32(data));
-        ModelId = new Uid(BitConverter.ToUInt32(data, sizeof(int)));
+        //Model = new Uid(BitConverter.ToUInt32(data, sizeof(int)));
+        Model = new Model(string.Empty, string.Empty);
         var triggersCount = BitConverter.ToInt32(data, sizeof(int) * 2);
         TriggerDictionary = new Dictionary<Uid, bool>(triggersCount);
         
@@ -74,7 +76,7 @@ public readonly record struct SaveGameObjectData // TODO: SAVE BODY TYPE
     public byte[] GetData()
     {
         var id = BitConverter.GetBytes(Id.Value);
-        var modelId = Encoding.UTF8.GetBytes(ModelId.ToString());
+        var modelId = Encoding.UTF8.GetBytes(Model.ToString());
         var triggerCount = BitConverter.GetBytes(TriggerDictionary.Count);
         var triggers = TriggerDictionary.SelectMany(pair => BitConverter.GetBytes(pair.Key.Value)
             .Concat(BitConverter.GetBytes(pair.Value))).ToArray();

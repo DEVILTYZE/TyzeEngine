@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Threading;
 using TyzeEngine.Interfaces;
-using TyzeEngine.Objects;
 using TyzeEngine.Resources;
 
 namespace TyzeEngine.GameStructure;
 
-public class Scene : IScene
+public sealed class Scene : IScene
 {
     private bool _loadError;
     private Thread _loadingPlacesThread;
@@ -25,7 +24,6 @@ public class Scene : IScene
         }
         private init => _loadError = value;
     }
-
     public ILighting Lighting { get; }
     public IPlace CurrentPlace { get; }
     public Dictionary<Uid, IResource> Resources { get; }
@@ -50,7 +48,7 @@ public class Scene : IScene
         _loadingPlacesThread.Start((int)args.Data);
     }
 
-    public void Start()
+    public void Run()
     {
         LoadResources();
         LoadPlace(CurrentPlace.Id);
@@ -58,7 +56,7 @@ public class Scene : IScene
         // Other settings...
     }
 
-    public void LoadScene(int index) => LoadSceneHandler?.Invoke(new TriggeredEventArgs(index));
+    public void LoadScene(Uid id) => LoadSceneHandler?.Invoke(new TriggeredEventArgs(id));
 
     public void LoadResources()
     {
@@ -76,10 +74,22 @@ public class Scene : IScene
             Models.Add(model.Id, model);
         }
     }
-    
+
+    public void EnableResource(Uid id)
+    {
+        if (Resources.ContainsKey(id))
+            Resources[id].Enable();
+    }
+
+    public void DisableResource(Uid id)
+    {
+        if (Resources.ContainsKey(id))
+            Resources[id].Disable();
+    }
+
     private void LoadPlace(object obj)
     {
-        var id = (int)obj;
+        var id = (Uid)obj;
         IPlace place = null;
 
         if (CurrentPlace.Id != id)
@@ -115,6 +125,10 @@ public class Scene : IScene
         }
         
         LoadResources(resourceIds);
+        place.Loaded = true;
+
+        foreach (var neighbourPlace in place.NeighbourPlaces)
+            neighbourPlace.Loaded = true;
     }
     
     private void LoadResources(IEnumerable<Uid> ids)

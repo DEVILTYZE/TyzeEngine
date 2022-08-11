@@ -1,18 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using OpenTK.Mathematics;
 
 namespace TyzeEngine;
 
 public static class DefaultModels
 {
-    public static (float[], uint[]) GetPoint() => (GetPointVertices(), GetPointIndices());
+    public static (Vector3[], uint[]) GetPoint() => (GetPointVertices(), GetPointIndices());
 
-    public static (float[], uint[]) GetTriangle() => (GetTriangleVertices(), GetTriangleIndices());
+    public static (Vector3[], uint[]) GetTriangle() => (GetTriangleVertices(), GetTriangleIndices());
     
-    public static (float[], uint[]) GetRectangle() => (GetRectangleVertices(), GetRectangleIndices());
+    public static (Vector3[], uint[]) GetRectangle() => (GetRectangleVertices(), GetRectangleIndices());
 
-    public static (float[], uint[]) GetCircle(float angle = (float)Math.PI / 10)
+    public static (Vector3[], uint[]) GetCircle(float angle = (float)Math.PI / 10)
     {
         var vertices = GetCircleVertices(angle);
         var indices = GetCircleIndices(vertices.Length / Constants.VertexLength - 1);
@@ -20,41 +21,46 @@ public static class DefaultModels
         return (vertices, indices);
     }
     
-    internal static IEnumerable<float> GetDefaultTexture(IReadOnlyList<float> points)
+    internal static IEnumerable<float> GetDefaultTexture(IReadOnlyList<Vector3> vertices)
     {
-        var result = new List<float>(points.Count * 2 / 3);
+        var result = new List<float>(vertices.Count * 2);
 
-        for (var i = 0; i < points.Count; i += 3)
+        for (var i = 0; i < vertices.Count; ++i)
         {
-            result.Add((points[i] + 1) / 2);
-            result.Add((points[i + 1] + 1) / 2);
+            result.Add((vertices[i].X + 1) / 2);
+            result.Add((vertices[i].Y + 1) / 2);
         }
 
         return result.ToArray();
     }
 
-    private static float[] GetPointVertices() => Enumerable.Repeat(0f, 3).ToArray();
+    private static Vector3[] GetPointVertices() => new[] { new Vector3(0, 0, 0) };
     
-    private static float[] GetTriangleVertices() => new[] { -1f, -1, 0, 1, -1, 0, 0, 1f, 0 };
+    private static Vector3[] GetTriangleVertices() 
+        => new[] { new Vector3(-1f, -1, 0), new Vector3(1, -1, 0), new Vector3(0, 1f, 0) };
 
-    private static float[] GetRectangleVertices() => new[] { -1f, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0 };
-    
-    private static float[] GetCircleVertices(float strideAngle)
+    private static Vector3[] GetRectangleVertices() => new[]
     {
-        var points = new List<float>();
+        new Vector3(-1f, -1, 0), new Vector3(1, -1, 0), 
+        new Vector3(1, 1, 0), new Vector3(-1, 1, 0)
+    };
+    
+    private static Vector3[] GetCircleVertices(float strideAngle)
+    {
+        var vertices = new List<Vector3>();
         const float radius = 1;
         const float start = 0;
 
-        points.AddRange(new[] { start, start, 0 });
+        vertices.Add(new Vector3(start, start, 0));
         
         for (var angle = 0f; angle <= 2 * Math.PI; angle += strideAngle)
         {
             var x = radius * (float)Math.Cos(angle);
             var y = radius * (float)Math.Sin(angle);
-            points.AddRange(new[] { x, y, 0 });
+            vertices.Add(new Vector3(x, y, 0));
         }
 
-        return points.ToArray();
+        return vertices.ToArray();
     }
 
     private static uint[] GetPointIndices() => Enumerable.Repeat((uint)0, 1).ToArray();

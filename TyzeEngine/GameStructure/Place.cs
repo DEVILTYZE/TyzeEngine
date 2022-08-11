@@ -5,18 +5,18 @@ using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.GameStructure;
 
-public class Place : IPlace, IDisposable
+public sealed class Place : IPlace, IDisposable
 {
     private bool _disposed;
     
-    public int Id { get; }
+    public Uid Id { get; }
     public IReadOnlyList<IPlace> NeighbourPlaces { get; set; }
     public List<IGameObject> GameObjects { get; }
     public bool Loaded { get; set; }
 
-    public Place(int id, IReadOnlyList<IPlace> neighbourPlaces, List<IGameObject> objects)
+    public Place(IReadOnlyList<IPlace> neighbourPlaces, List<IGameObject> objects)
     {
-        Id = id;
+        Id = new Uid();
         NeighbourPlaces = neighbourPlaces;
         GameObjects = objects;
         Loaded = false;
@@ -30,10 +30,9 @@ public class Place : IPlace, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    IEnumerable<Uid> IPlace.GetResourceIds() 
-        => GameObjects.SelectMany(obj => obj.ResourceIds ?? new List<Uid>());
+    IEnumerable<Uid> IPlace.GetResourceIds() => GameObjects.SelectMany(obj => obj.ResourceIds ?? new List<Uid>());
 
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         if (_disposed)
             return;

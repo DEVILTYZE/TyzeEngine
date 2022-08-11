@@ -15,3 +15,10 @@ public enum VisibilityType
     Hidden = 1,
     Collapsed = 2
 }
+
+public enum BodyVisualType
+{
+    Color = 0,
+    Texture = 1,
+    ColorAndTexture = 2
+}

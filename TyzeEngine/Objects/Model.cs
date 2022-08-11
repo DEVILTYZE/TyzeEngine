@@ -9,11 +9,11 @@ namespace TyzeEngine.Objects;
 public class Model : IModel, IDisposable
 {
     private bool _disposed;
-    private float[] _vertices;
     private uint[] _indices;
-    private IVectorArray _texture;
+    private readonly IVectorArray _texture;
 
     public Uid Id { get; }
+    public IReadOnlyList<Vector3> Vertices { get; private set; }
     public string Directory { get; }
     public string Name { get; }
     public bool Loaded { get; private set; }
@@ -24,11 +24,11 @@ public class Model : IModel, IDisposable
     public static IModel Circle => new Model(DefaultModels.GetCircle()) { Loaded = true };
     // public static IModel Cube => new Model(Constants.TriangleModelName, Constants.DefaultModelsDirectory);
 
-    private Model((float[], uint[]) coordinates)
+    private Model((Vector3[], uint[]) coordinates)
     {
         Id = new Uid();
-        _vertices = coordinates.Item1;
-        _texture = null;
+        Vertices = coordinates.Item1;
+        _texture = new VectorArray(DefaultModels.GetDefaultTexture(Vertices), ArrayType.TwoDimensions);
         _indices = coordinates.Item2;
     }
     
@@ -42,99 +42,99 @@ public class Model : IModel, IDisposable
 
     public void Load()
     {
-        //     void SetField(int index, MatchCollection matches)
-        //     {
-        //         var value = matches[index].Value.Split(new[] { " ", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-        //         var doubleValue = value.Select(float.Parse).ToArray();
-        //     
-        //         switch (index)
-        //         {
-        //             case 0:
-        //                 _vertices = doubleValue;
-        //                 break;
-        //             case 1:
-        //                 _indices = value.Select(uint.Parse).ToArray();
-        //                 break;
-        //             case 2:
-        //                 Size = new Vector3(doubleValue[0], doubleValue[1], doubleValue[2]);
-        //                 break;
-        //             case 3:
-        //                 Position = new Vector3(doubleValue[0], doubleValue[1], doubleValue[2]);
-        //                 break;
-        //             default:
-        //                 _color = new Vector4(doubleValue[0], doubleValue[1], doubleValue[2], doubleValue[3]);
-        //                 break;
-        //         }
-        //     }
-        //     
-        //     var path = Path.Combine(Directory, Name + Constants.ModelExtension);
+        // void SetField(int index, MatchCollection matches)
+        // {
+        //     var value = matches[index].Value.Split(new[] { " ", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+        //     var doubleValue = value.Select(float.Parse).ToArray();
         //
-        //     if (!File.Exists(path))
+        //     switch (index)
         //     {
-        //         LoadError = true;
-        //         return;
+        //         case 0:
+        //             _vertices = doubleValue;
+        //             break;
+        //         case 1:
+        //             _indices = value.Select(uint.Parse).ToArray();
+        //             break;
+        //         case 2:
+        //             Size = new Vector3(doubleValue[0], doubleValue[1], doubleValue[2]);
+        //             break;
+        //         case 3:
+        //             Position = new Vector3(doubleValue[0], doubleValue[1], doubleValue[2]);
+        //             break;
+        //         default:
+        //             _color = new Vector4(doubleValue[0], doubleValue[1], doubleValue[2], doubleValue[3]);
+        //             break;
         //     }
+        // }
         //
-        //     var text = File.ReadAllText(path);
-        //     const string pattern = @"(((-?\d.\d(\s|))|\d(\s|))+\r\n)+";
-        //     var matches = Regex.Matches(text, pattern);
-        //     
-        //     for (var i = 0; i < matches.Count; ++i)
-        //         SetField(i, matches);
+        // var path = Path.Combine(Directory, Name + Constants.ModelExtension);
+        //
+        // if (!File.Exists(path))
+        // {
+        //     LoadError = true;
+        //     return;
+        // }
+        //
+        // var text = File.ReadAllText(path);
+        // const string pattern = @"(((-?\d.\d(\s|))|\d(\s|))+\r\n)+";
+        // var matches = Regex.Matches(text, pattern);
+        //
+        // for (var i = 0; i < matches.Count; ++i)
+        //     SetField(i, matches);
         Loaded = true;
     }
 
     public (float[], uint[]) GetVectorArray(IGameObject obj)
     {
-        _texture = obj.Body.HasTexture 
-            ? new VectorArray(DefaultModels.GetDefaultTexture(_vertices), ArrayType.TwoDimensions) 
-            : null;
-        
-        float[] GetArrays(float[] texture, float[] colorArray, bool withTexture)
+        (float[], uint[]) GetArrayVisibility(float[] texture) => obj.Body.Visibility switch
         {
-            const int vStride = 3;
+            VisibilityType.Hidden => (GetArrays(texture, Constants.NullColor), _indices),
+            VisibilityType.Collapsed => (new[] { 0f, 0, 0, -1, -1, 0, 0, 0, 0 }, new uint[] { 1 }),
+            VisibilityType.Visible or _ => (GetArrays(texture, obj.Body.Color), _indices)
+        };
+        
+        float[] GetArrays(float[] texture, Vector4 color)
+        {
             const int tStride = 2;
-            var count = _vertices.Length / Constants.VertexLength;
-            var result = new List<float>(count * (texture.Length + Constants.ColorLength));
-            
-            if (withTexture)
-                for (var i = 0; i < count; ++i)
-                {
-                    result.AddRange(_vertices[(i * vStride)..((i + 1) * vStride)]);
-                    result.AddRange(texture[(i * tStride)..((i + 1) * tStride)].Concat(colorArray));
-                }
-            else
-                for (var i = 0; i < count; ++i)
-                {
-                    result.AddRange(_vertices[(i * vStride)..((i + 1) * vStride)]);
-                    result.AddRange(texture.Concat(colorArray));
-                }
+            var colorArray = new[] { color.X, color.Y, color.Z, color.W };
+            var result = new List<float>(Vertices.Count * (texture.Length + Constants.ColorLength));
 
+            for (var i = 0; i < Vertices.Count; ++i)
+            {
+                result.AddRange(new[] { Vertices[i].X, Vertices[i].Y, Vertices[i].Z });
+                result.AddRange(texture[(i * tStride)..((i + 1) * tStride)].Concat(colorArray));
+            }
+            
             return result.ToArray();
         }
+
+        var texture = Enumerable.Repeat(new[] { -1f, -1 }, Vertices.Count).SelectMany(x => x).ToArray();
+
+        if (obj.Body.Visual is not (BodyVisualType.Texture or BodyVisualType.ColorAndTexture))
+            return GetArrayVisibility(texture);
         
-        var texture = new[] { -1f, -1f };
-        var colorArray = new[] { obj.Body.Color.X, obj.Body.Color.Y, obj.Body.Color.Z, obj.Body.Color.W };
+        texture = obj.Body.Visual == BodyVisualType.Texture ? _texture.GetArray() : null;
+            
+        if (obj.Body.Visual == BodyVisualType.Texture)
+            obj.Body.Color = Constants.NullColor;
 
-        return obj.Body.Visibility switch
-        {
-            VisibilityType.Hidden => (GetArrays(texture, new[] { 0f, 0, 0, 0 }, false), _indices),
-            VisibilityType.Collapsed => (new[] { 0f, 0, 0, -1, -1, 0, 0, 0, 0 }, new uint[] { 1 }),
-            VisibilityType.Visible or _ => _texture is null
-                ? (GetArrays(texture, colorArray, false), _indices)
-                : (GetArrays(_texture.GetArray(), colorArray, true), _indices)
-        };
-    }
-
-    public float GetVolume(Vector3 scale)
-    {
-        throw new NotImplementedException();
+        return GetArrayVisibility(texture);
     }
 
     public void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
+    }
+
+    public Vector3[] GetScaledVectorArray(Vector3 scale)
+    {
+        var vertices = Vertices.ToArray();
+
+        for(var i = 0; i < vertices.Length; ++i)
+            Vector3.Multiply(vertices[i], scale, out vertices[i]);
+
+        return vertices;
     }
 
     private void Dispose(bool disposing)
@@ -147,7 +147,7 @@ public class Model : IModel, IDisposable
             // something...
         }
 
-        _vertices = null;
+        Vertices = null;
         _indices = null;
         _disposed = true;
     }

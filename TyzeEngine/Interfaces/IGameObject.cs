@@ -12,13 +12,14 @@ public interface IGameObject
     internal BufferUsageHint DrawType { get; }
     
     Uid Id { get; }
-    Uid ModelId { get; }
-    List<Uid> ResourceIds { get; }
+    IModel Model { get; }
     IBody Body { get; set; }
+    List<Uid> ResourceIds { get; set; }
+    Uid ResourceId { get; }
     List<ITrigger> Triggers { get; }
     List<IScript> Scripts { get; }
-    bool SaveStatus { get; }
+    bool SaveStatus { get; set; }
 
-    void EnableResources(Dictionary<Uid, IResource> resources);
-    void DisableResources(Dictionary<Uid, IResource> resources);
+    void NextResource();
+    void PreviousResource();
 }

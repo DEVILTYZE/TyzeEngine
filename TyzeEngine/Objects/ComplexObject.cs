@@ -8,8 +8,8 @@ public abstract class ComplexObject : GameObject, IComplexObject
 {
     public List<IGameObject> GameObjects { get; }
 
-    protected ComplexObject(Uid modelId, IReadOnlyList<Uid> resourceIds, IBody physics, List<IGameObject> objects) 
-        : base(modelId, resourceIds, physics)
+    protected ComplexObject(IModel model, List<IGameObject> objects) 
+        : base(model)
     {
         GameObjects = objects;
     }

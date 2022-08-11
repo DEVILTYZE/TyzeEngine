@@ -10,13 +10,4 @@
       <PackageReference Include="SixLabors.ImageSharp" Version="2.1.3" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Compile Update="TyzeWindow.Additional.cs">
-        <DependentUpon>TyzeWindow.cs</DependentUpon>
-      </Compile>
-      <Compile Update="PhysicsGenerator.CollisionMethods.cs">
-        <DependentUpon>PhysicsGenerator.cs</DependentUpon>
-      </Compile>
-    </ItemGroup>
-
 </Project>

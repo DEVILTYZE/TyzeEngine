@@ -8,43 +8,34 @@ namespace TyzeEngine.Interfaces;
 public interface IBody
 {
     IGameObject GameObject { get; set; }
-    Vector3 Position { get; }
-    Vector3 Size { get; }
-    Vector3 Rotation { get; }
-    Vector4 Color { get; }
-    bool HasTexture { get; }
+    Vector3 Position { get; set; }
+    Vector3 Scale { get; set; }
+    Vector3 Rotation { get; set; }
+    Vector4 Color { get; set; }
     VisibilityType Visibility { get; set; }
+    BodyVisualType Visual { get; set; }
     
     // PHYSICS
-    IMaterial ObjectMaterial { get; }
+    IMaterial Material { get; }
     float Mass { get; }
     float InverseMass { get; }
     float Inertia { get; }
     float InverseInertia { get; }
-    float Volume { get; }
-    Vector3 Velocity { get; }
+    Vector3 Centroid { get; set; }
+    Vector3 Torque { get; set; }
+    Vector3 Velocity { get; set; }
+    Vector3 AngularVelocity { get; set; }
     Vector3 Force { get; }
     Vector3 GravityForce { get; set; }
     IReadOnlyDictionary<Type, Func<IBody, IBody, CollisionEventArgs>> CollisionMethods { get; }
-    bool IsEnabled { get; set; }
 
-    void SetPosition(float x, float y, float z);
-    void SetScale(float x, float y, float z);
-    void SetRotation(float x, float y, float z);
-    void Translate(float x, float y, float z);
-    void Scale(float x, float y, float z);
-    void Rotate(float x, float y, float z);
     void SetColor(byte r, byte g, byte b, byte a);
-    void SetColor(Vector4 rgba);
-    void RemoveColor();
-    void SetTextureStatus(bool isEnabled, bool withColor = false);
     
     // PHYSICS
     void AddMethod(Type physicsType, Func<IBody, IBody, CollisionEventArgs> method);
-    CollisionEventArgs IsCollisionWith(IBody bodyA, IBody bodyB);
-    void SetVelocity(Vector3 newVelocity);
-    void AddVelocity(Vector3 additionalVelocity);
+    CollisionEventArgs IsCollisionTo(IBody bodyA, IBody bodyB);
     void AddForce(Uid id, Vector3 force);
     void RemoveForce(Uid id);
+    void SetMassAndInertia(float mass, float inertia);
     IBody Clone();
 }

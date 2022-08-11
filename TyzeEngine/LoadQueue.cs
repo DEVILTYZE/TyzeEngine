@@ -56,8 +56,12 @@ public static class LoadQueue
 
         foreach (var obj in ObjectQueue)
             ((IDisposable)obj).Dispose();
-        
+
+        foreach (var model in ModelQueue)
+            ((IDisposable)model).Dispose();
+
         ResourceQueue.Clear();
         ObjectQueue.Clear();
+        ModelQueue.Clear();
     }
 }

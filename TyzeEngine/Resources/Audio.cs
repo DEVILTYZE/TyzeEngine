@@ -10,10 +10,13 @@ public class Audio : Resource
     private int _buffer;
     private int _duration;
     
+    public bool IsEnabled { get; private set; }
+    
     public Audio(string path) : base(path)
     {
         _buffer = -1;
         _duration = 0;
+        IsEnabled = false;
     }
 
     public override void Load()
@@ -39,6 +42,7 @@ public class Audio : Resource
 
     public override void Enable()
     {
+        IsEnabled = true;
         ThreadPool.QueueUserWorkItem(_ => Play());
     }
 
@@ -83,9 +87,9 @@ public class Audio : Resource
         audioInfo.Open(Path);
         var frequency = int.Parse(audioInfo.Get(StreamKind.Audio, 0, "SamplingRate"));
         var countOfChannels = int.Parse(audioInfo.Get(StreamKind.Audio, 0, "Channel(s)"));
-        var bitDepth = int.Parse(audioInfo.Get(StreamKind.Audio, 0, "BitDepth"));
+        //var bitDepth = int.Parse(audioInfo.Get(StreamKind.Audio, 0, "BitDepth"));
         var duration = int.Parse(audioInfo.Get(StreamKind.Audio, 0, "Duration"));
-        var format = GetFormat(countOfChannels, bitDepth);
+        var format = GetFormat(countOfChannels, 16);
         audioInfo.Close();
 
         return (format, frequency, duration);
@@ -97,5 +101,6 @@ public class Audio : Resource
         AL.SourcePlay(Handle);
         Thread.Sleep((int)(_duration * Constants.Duration));
         Disable();
+        IsEnabled = false;
     }
 }

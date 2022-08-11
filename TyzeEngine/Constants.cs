@@ -47,7 +47,7 @@ public static class Constants
     internal static readonly Vector4 DefaultColor = new(.5f, .5f, .5f, 1);
     internal static readonly Vector4 NullColor = new(0, 0, 0, 0);
     public const float GravityConstant = .00000000667f;
-    public const int RectanglePointsCount = 4;
+    public const int PolygonPointsCount = 8;
     
     // AUDIO
     public const int Frequency441 = 44100;

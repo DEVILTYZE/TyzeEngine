@@ -3,32 +3,90 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
+using TyzeEngine.Physics;
 
 namespace TyzeEngine;
 
-public static partial class PhysicsGenerator
+public static class PhysicsGenerator
 {
     private static readonly object CollisionLocker = new();
     
-    public static CollisionHandler CollisionEnter { get; set; } = ResolveCollision2D;
+    public static CollisionHandler CollisionEnter { get; set; } = ResolveCollision;
     public static CollisionHandler CollisionStay { get; set; }
     public static CollisionHandler CollisionExit { get; set; }
 
-    public static void Collision2D(IReadOnlyList<IGameObject> objects)
+    public static void DetermineCollision(IReadOnlyList<IGameObject> objects)
     {
         Parallel.For(0, objects.Count - 1, i =>
         {
             for (var j = i + 1; j < objects.Count; ++j)
             {
-                var args = objects[i].Body.IsCollisionWith(objects[i].Body, objects[j].Body);
+                var args = objects[i].Body.IsCollisionTo(objects[i].Body, objects[j].Body);
 
                 if (args.IsCollides)
                     CollisionEnter.Invoke(args);
             }
         });
     }
+    
+    // RECTANGLE WITH RECTANGLE
 
-    private static void ResolveCollision2D(CollisionEventArgs args)
+    internal static CollisionEventArgs PolygonToPolygon(IBody bodyA, IBody bodyB)
+    {
+        var args = new CollisionEventArgs(bodyA, bodyB);
+        var rectangleBodyA = (PolygonBody)bodyA;
+        var rectangleBodyB = (PolygonBody)bodyB;
+        
+        // TODO: CREATE PHYSICS
+
+        return args;
+    }
+    
+    // CIRCLE WITH CIRCLE
+    
+    internal static CollisionEventArgs CircleToCircle(IBody bodyA, IBody bodyB)
+    {
+        var args = new CollisionEventArgs(bodyA, bodyB);
+        var circleBodyA = (EllipseBody)bodyA;
+        var circleBodyB = (EllipseBody)bodyB;
+        var normal = circleBodyA.Position - circleBodyA.Position;
+        var radius = circleBodyA.Radius + circleBodyB.Radius;
+        radius *= radius;
+        var distance = normal.LengthSquared;
+
+        if (distance > radius)
+            return args;
+
+        args.IsCollides = true;
+        distance = MathF.Sqrt(distance);
+
+        if (distance != 0)
+        {
+            args.Penetration = radius - distance;
+            args.Normal = new Vector3(-1, 0 ,0);
+
+            return args;
+        }
+
+        args.Penetration = circleBodyA.Radius;
+        args.Normal = new Vector3(1, 0, 0);
+
+        return args;
+    }
+
+    // RECTANGLE WITH CIRCLE
+
+    internal static CollisionEventArgs CircleToPolygon(IBody circle, IBody rectangle)
+    {
+        throw new NotImplementedException();
+    }
+    
+    internal static CollisionEventArgs PolygonToCircle(IBody rectangle, IBody circle)
+    {
+        throw new NotImplementedException();
+    }
+
+    private static void ResolveCollision(CollisionEventArgs args)
     {
         PositionCorrection(args);
         var (bodyA, bodyB) = (args.BodyA, args.BodyB);
@@ -40,43 +98,43 @@ public static partial class PhysicsGenerator
         if (velocityAlongNormal > 0)
             return;
 
-        var e = MathF.Min(bodyA.ObjectMaterial.Restitution, bodyB.ObjectMaterial.Restitution);
+        var e = MathF.Min(bodyA.Material.Restitution, bodyB.Material.Restitution);
         var jn = -(1 + e) * velocityAlongNormal / (bodyA.InverseMass + bodyB.InverseMass);
         var impulse = args.Normal * jn;
         
         lock (CollisionLocker)
         {
-            bodyA.AddVelocity(-bodyA.InverseMass * impulse);
-            bodyB.AddVelocity(bodyB.InverseMass * impulse);
+            bodyA.Velocity += -bodyA.InverseMass * impulse;
+            bodyB.Velocity += bodyB.InverseMass * impulse;
         }
 
         difference = bodyB.Velocity - bodyA.Velocity;
         var tangent = difference - Vector3.Dot(difference, args.Normal) * args.Normal;
         tangent.NormalizeFast();
 
-        var radius1 = Vector3.Zero;
-        var radius2 = Vector3.Zero;
-        var orientation1 = 0; // MathF.Pow(Vector3.Dot(radius1, tangent), 2) * bodyA.InverseInertia;
-        var orientation2 = 0; // MathF.Pow(Vector3.Dot(radius2, tangent), 2) * bodyB.InverseInertia;
+        var orientation1 = MathF.Pow(Vector3.Dot(bodyA.Centroid, tangent), 2) * bodyA.InverseInertia;
+        var orientation2 = MathF.Pow(Vector3.Dot(bodyB.Centroid, tangent), 2) * bodyB.InverseInertia;
         var jt = -Vector3.Dot(difference, tangent);
         jt /= bodyA.InverseMass + bodyB.InverseMass + orientation1 + orientation2;
 
-        var mu = (bodyA.ObjectMaterial.StaticFriction + bodyB.ObjectMaterial.StaticFriction) / 2;
+        var mu = (bodyA.Material.StaticFriction + bodyB.Material.StaticFriction) / 2;
         Vector3 frictionImpulse;
 
         if (MathF.Abs(jt) < jn * mu)
             frictionImpulse = jt * tangent;
         else
         {
-            var dynamicFriction = bodyA.ObjectMaterial.DynamicFriction; 
-            dynamicFriction = (dynamicFriction + bodyB.ObjectMaterial.DynamicFriction) / 2;
+            var dynamicFriction = bodyA.Material.DynamicFriction; 
+            dynamicFriction = (dynamicFriction + bodyB.Material.DynamicFriction) / 2;
             frictionImpulse = -jn * tangent * dynamicFriction;
         }
         
         lock (CollisionLocker)
         {
-            bodyA.AddVelocity(-bodyA.InverseMass * frictionImpulse);
-            bodyB.AddVelocity(bodyB.InverseMass * frictionImpulse);
+            bodyA.Velocity += -bodyA.InverseMass * frictionImpulse;
+            bodyB.Velocity += bodyB.InverseMass * frictionImpulse;
+            bodyA.Torque += -bodyA.InverseInertia * frictionImpulse;
+            bodyB.Torque += bodyB.InverseInertia * frictionImpulse;
         }
     }
 
@@ -92,8 +150,8 @@ public static partial class PhysicsGenerator
         
         lock (CollisionLocker)
         {
-            bodyA.Translate(correction1.X, correction1.Y, correction1.Z);
-            bodyB.Translate(correction2.X, correction2.Y, correction2.Z);
+            bodyA.Position += correction1;
+            bodyB.Position += correction2;
         }
     }
 }

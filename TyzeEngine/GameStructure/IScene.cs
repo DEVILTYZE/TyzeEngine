@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
 using TyzeEngine.Interfaces;
-using TyzeEngine.Objects;
 using TyzeEngine.Resources;
 
 namespace TyzeEngine.GameStructure;
@@ -19,7 +18,9 @@ public interface IScene
     TriggerHandler LoadSceneHandler { get; set; }
 
     void LoadPlace(TriggeredEventArgs args);
-    void Start();
-    void LoadScene(int index);
+    void Run();
+    void LoadScene(Uid id);
     void LoadResources();
+    void EnableResource(Uid id);
+    void DisableResource(Uid id);
 }
