@@ -2,7 +2,7 @@
 
 namespace TyzeEngine;
 
-public readonly struct Uid : IEquatable<Uid>
+public readonly struct Uid : IEquatable<Uid>, IComparable<Uid>
 {
     public static readonly Uid Zero = new(uint.MinValue);
     
@@ -34,4 +34,6 @@ public readonly struct Uid : IEquatable<Uid>
 
         return (uint)(part1 + part2);
     }
+
+    public int CompareTo(Uid other) => Value.CompareTo(other.Value);
 }

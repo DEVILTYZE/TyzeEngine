@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Resources;
@@ -8,60 +7,68 @@ namespace TyzeEngine;
 
 public static class LoadQueue
 {
-    private static readonly Queue<IResource> ResourceQueue = new();
-    private static readonly Queue<IGameObject> ObjectQueue = new();
-    private static readonly Queue<IModel> ModelQueue = new();
+    private const int DefaultCount = 16;
+    
+    private static Queue<IResource> _resourceQueue = new(DefaultCount);
+    private static Queue<IGameObject> _objectQueue = new(DefaultCount);
+    private static Queue<IModel> _modelQueue = new(DefaultCount);
 
-    public static bool HasNewResources => ResourceQueue.Count > 0;
-    public static bool HasNewModels => ModelQueue.Count > 0;
+    public static bool HasNewResources => _resourceQueue.Count > 0;
+    public static bool HasNewModels => _modelQueue.Count > 0;
 
-    public static void Add(IResource resource) => ResourceQueue.Enqueue(resource);
+    public static void Add(IResource resource) => _resourceQueue.Enqueue(resource);
     
     public static void AddRange(IEnumerable<IResource> resources)
     {
         foreach(var resource in resources)
-            ResourceQueue.Enqueue(resource);
+            _resourceQueue.Enqueue(resource);
     }
 
-    public static void Add(IGameObject obj) => ObjectQueue.Enqueue(obj);
+    public static void Add(IGameObject obj) => _objectQueue.Enqueue(obj);
+
+    public static void AddRange(IEnumerable<IGameObject> objects)
+    {
+        foreach (var obj in objects)
+            _objectQueue.Enqueue(obj);
+    }
 
     public static void Add(IModel model)
     {
         if (!model.Loaded)
-            ModelQueue.Enqueue(model);
+            _modelQueue.Enqueue(model);
     }
     
     public static void AddRange(IEnumerable<IModel> models)
     {
         foreach (var model in models.Where(localModel => !localModel.Loaded))
-            ModelQueue.Enqueue(model);
+            _modelQueue.Enqueue(model);
     }
 
-    public static IResource TakeLastResource() => ResourceQueue.Dequeue();
+    public static IResource TakeLastResource() => _resourceQueue.Dequeue();
 
-    public static IModel TakeLastModel() => ModelQueue.Dequeue();
+    public static IModel TakeLastModel() => _modelQueue.Dequeue();
     
     public static IEnumerable<IGameObject> TakeObjects()
     {
-        var objects = ObjectQueue.ToArray();
-        ObjectQueue.Clear();
+        var objects = _objectQueue.ToArray();
+        _objectQueue = new Queue<IGameObject>(DefaultCount);
 
         return objects;
     }
 
     public static void Clear()
     {
-        foreach (var resource in ResourceQueue)
-            ((IDisposable)resource).Dispose();
+        foreach (var resource in _resourceQueue)
+            resource?.Dispose();
 
-        foreach (var obj in ObjectQueue)
-            ((IDisposable)obj).Dispose();
+        foreach (var obj in _objectQueue)
+            obj?.Dispose();
 
-        foreach (var model in ModelQueue)
-            ((IDisposable)model).Dispose();
+        foreach (var model in _modelQueue)
+            model?.Dispose();
 
-        ResourceQueue.Clear();
-        ObjectQueue.Clear();
-        ModelQueue.Clear();
+        _resourceQueue = new Queue<IResource>();
+        _objectQueue = new Queue<IGameObject>();
+        _modelQueue = new Queue<IModel>();
     }
 }

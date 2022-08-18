@@ -38,7 +38,7 @@ public sealed class Texture : Resource
         
         image.Mutate(img => img.Flip(FlipMode.Vertical));
 
-        var pixels = new byte[Constants.ImageConst * image.Width * image.Height];
+        var pixels = new byte[4 * image.Width * image.Height];
         image.CopyPixelDataTo(pixels);
 
         // GENERATE
@@ -78,6 +78,7 @@ public sealed class Texture : Resource
             return;
         
         Disable();
-        Disposed = true;
+        GL.DeleteTexture(Handle);
+        base.Dispose(disposing);
     }
 }

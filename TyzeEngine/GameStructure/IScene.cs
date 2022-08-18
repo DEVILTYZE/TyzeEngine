@@ -1,19 +1,20 @@
-﻿using System.Collections.Generic;
-using System.Threading;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Resources;
 
 namespace TyzeEngine.GameStructure;
 
-public interface IScene
+public interface IScene : IDisposable
 {
-    internal Thread LoadingPlacesThread { get; }
+    internal Task LoadingPlacesTask { get; }
     
     bool LoadError { get; }
     ILighting Lighting { get; }
     IPlace CurrentPlace { get; }
-    Dictionary<Uid, IResource> Resources { get; }
-    Dictionary<Uid, IModel> Models { get; }
+    SortedList<Uid, IResource> Resources { get; }
+    SortedList<Uid, IModel> Models { get; }
     TriggerHandler ReloadObjects { get; set; }
     TriggerHandler LoadSceneHandler { get; set; }
 
@@ -21,6 +22,4 @@ public interface IScene
     void Run();
     void LoadScene(Uid id);
     void LoadResources();
-    void EnableResource(Uid id);
-    void DisableResource(Uid id);
 }

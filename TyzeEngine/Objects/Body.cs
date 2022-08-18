@@ -10,24 +10,26 @@ public abstract class Body : IBody
 {
     private readonly Dictionary<Type, Func<IBody, IBody, CollisionEventArgs>> _collisionMethods;
     private readonly Dictionary<Uid, Vector3> _forces;
-    
-    public IGameObject GameObject { get; set; }
-    public Vector3 Position { get; set; }
-    public Vector3 Scale { get; set; }
-    public Vector3 Rotation { get; set; }
-    public Vector4 Color { get; set; }
-    public VisibilityType Visibility { get; set; }
-    public BodyVisualType Visual { get; set; }
 
+    public Vector3 Position { get; set; } = Constants.DefaultPosition;
+    public Vector3 Scale { get; set; } = Constants.DefaultSize2D;
+    public Vector3 Rotation { get; set; } = Constants.DefaultRotation;
+    public Matrix3 RotationMatrix => Matrix3.Identity * Matrix3.CreateRotationX(Rotation.X) * Matrix3.CreateRotationY(
+        Rotation.Y) * Matrix3.CreateRotationZ(Rotation.Z);
+    public Vector4 Color { get; set; } = Constants.DefaultColor;
+    public VisibilityType Visibility { get; set; } = VisibilityType.Visible;
+    public BodyVisualType Visual { get; set; } = BodyVisualType.Color;
+
+    public int Layer { get; set; }
     public IMaterial Material { get; }
     public float Mass { get; private set; }
     public float InverseMass { get; private set; }
     public float Inertia { get; private set; }
     public float InverseInertia { get; private set; }
-    public Vector3 Centroid { get; set; }
-    public Vector3 Torque { get; set; }
-    public Vector3 Velocity { get; set; }
-    public Vector3 AngularVelocity { get; set; }
+    public Vector3 Centroid { get; set; } = Vector3.Zero;
+    public Vector3 Torque { get; set; } = Vector3.Zero;
+    public Vector3 Velocity { get; set; } = Vector3.Zero;
+    public Vector3 AngularVelocity { get; set; } = Vector3.Zero;
     public Vector3 Force
     {
         get
@@ -42,21 +44,11 @@ public abstract class Body : IBody
     }
     public Vector3 GravityForce { get; set; }
     public IReadOnlyDictionary<Type, Func<IBody, IBody, CollisionEventArgs>> CollisionMethods => _collisionMethods;
+    public bool IsEnabled { get; set; }
 
     protected Body(IMaterial material)
     {
         Material = material;
-        Position = Constants.DefaultPosition;
-        Scale = Constants.DefaultSize2D;
-        Rotation = Constants.DefaultRotation;
-        Color = Constants.DefaultColor;
-        Visibility = VisibilityType.Visible;
-        Visual = BodyVisualType.Color;
-        
-        Centroid = Vector3.Zero;
-        Torque = Vector3.Zero;
-        Velocity = Vector3.Zero;
-        AngularVelocity = Vector3.Zero;
         SetMassAndInertia(0, 0);
         _forces = new Dictionary<Uid, Vector3>();
         _collisionMethods = new Dictionary<Type, Func<IBody, IBody, CollisionEventArgs>>();
@@ -69,12 +61,12 @@ public abstract class Body : IBody
         (float)a / byte.MaxValue
     );
 
-    public void AddMethod(Type physicsType, Func<IBody, IBody, CollisionEventArgs> method)
+    public void AddMethod(Type bodyType, Func<IBody, IBody, CollisionEventArgs> method)
     {
-        if (CollisionMethods.ContainsKey(physicsType))
-            _collisionMethods[physicsType] = method;
+        if (_collisionMethods.ContainsKey(bodyType))
+            _collisionMethods[bodyType] = method;
         else
-            _collisionMethods.Add(physicsType, method);
+            _collisionMethods.Add(bodyType, method);
     }
 
     public abstract CollisionEventArgs IsCollisionTo(IBody bodyA, IBody bodyB);

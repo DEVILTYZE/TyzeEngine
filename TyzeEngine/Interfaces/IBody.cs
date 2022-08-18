@@ -7,15 +7,16 @@ namespace TyzeEngine.Interfaces;
 
 public interface IBody
 {
-    IGameObject GameObject { get; set; }
     Vector3 Position { get; set; }
     Vector3 Scale { get; set; }
     Vector3 Rotation { get; set; }
+    Matrix3 RotationMatrix { get; }
     Vector4 Color { get; set; }
     VisibilityType Visibility { get; set; }
     BodyVisualType Visual { get; set; }
     
     // PHYSICS
+    int Layer { get; set; }
     IMaterial Material { get; }
     float Mass { get; }
     float InverseMass { get; }
@@ -28,6 +29,7 @@ public interface IBody
     Vector3 Force { get; }
     Vector3 GravityForce { get; set; }
     IReadOnlyDictionary<Type, Func<IBody, IBody, CollisionEventArgs>> CollisionMethods { get; }
+    bool IsEnabled { get; set; }
 
     void SetColor(byte r, byte g, byte b, byte a);
     

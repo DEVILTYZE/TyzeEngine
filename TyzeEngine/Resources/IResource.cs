@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace TyzeEngine.Resources;
 
-public interface IResource
+public interface IResource : IDisposable
 {
     Uid Id { get; }
     int Handle { get; }

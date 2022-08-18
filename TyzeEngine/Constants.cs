@@ -5,8 +5,6 @@ namespace TyzeEngine;
 
 public static class Constants
 {
-    public const string AssemblyName = "TyzeEngine";
-    
     // DIRECTORIES
     public const string AssetsDirectory = "assets\\";
     public const string ModelsDirectory = AssetsDirectory + "models\\";
@@ -20,18 +18,12 @@ public static class Constants
     public const string ShaderFragTexturePath = ShadersDirectory + "shader.frag";
     public const string FileNotExists = SystemDirectory + "error.png"; // Path
     public const string DefaultModelName = "model";
-    public const string PointModelName = "point";
-    public const string TriangleModelName = "triangle";
-    public const string RectangleModelName = "rectangle";
-    public const string CircleModelName = "circle";
-    public const string CubeModelName = "cube";
-    public const string ModelExtension = ".mdl";
     public static readonly string DefaultSaveName = "save_" + DateTime.Now.ToString("ddMMyyyyHHmmss");
     public const string SaveExtension = ".sav";
-
     public const string TestName = "Test application";
+    
+    // DEFAULT VALUES
     public const int DefaultDelay = 25;
-    public const int ImageConst = 4;
     public const int ErrorCode = -1;
     public const int SizeOfTrigger = sizeof(int) + sizeof(bool);
     public const int VertexStride = VertexLength * sizeof(float);
@@ -46,24 +38,15 @@ public static class Constants
     internal static readonly Vector3 DefaultRotation = new(0, 0, 0);
     internal static readonly Vector4 DefaultColor = new(.5f, .5f, .5f, 1);
     internal static readonly Vector4 NullColor = new(0, 0, 0, 0);
-    public const float GravityConstant = .00000000667f;
-    public const int PolygonPointsCount = 8;
     
     // AUDIO
     public const int Frequency441 = 44100;
-    public const int Frequency48 = 48000;
     public const int BitDepth8 = 8;
     public const int BitDepth16 = BitDepth8 * 2;
-    public const int BitDepth24 = BitDepth8 * 3;
-    public const int BitDepth32 = BitDepth8 * 4;
     public const float Duration = .75f;
 
+    // RESOURCE
     public static readonly string[] ImageExtensions = { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".ico", ".tiff", ".svg" };
     public static readonly string[] AudioExtensions = { ".mp3", ".wav", ".flac", ".aiff" };
     public static readonly string[] VideoExtensions = { ".avi", ".mp4", ".mov", ".flv", ".wmv", ".mpeg" };
-
-    public const string VerticesName = "vertices";
-    public const string IndicesName = "indices";
-    public const string PositionName = "position";
-    public const string ColorName = "color";
 }

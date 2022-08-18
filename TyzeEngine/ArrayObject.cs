@@ -23,7 +23,7 @@ public sealed class ArrayObject : IDisposable
         _count = 0;
     }
     
-    ~ArrayObject() => Dispose(false);
+    ~ArrayObject() => ReleaseUnmanagedResources();
 
     public void Enable()
     {
@@ -87,11 +87,11 @@ public sealed class ArrayObject : IDisposable
 
     public void Dispose()
     {
-        Dispose(true);
+        ReleaseUnmanagedResources();
         GC.SuppressFinalize(this);
     }
 
-    private void Dispose(bool disposing)
+    private void ReleaseUnmanagedResources()
     {
         if (_disposed || Handle == Constants.ErrorCode)
             return;

@@ -19,7 +19,7 @@ public sealed class BufferObject : IDisposable
         IsEnabled = false;
     }
 
-    ~BufferObject() => Dispose(false);
+    ~BufferObject() => ReleaseUnmanagedResources();
 
     public void SetData<T>(T[] data, BufferUsageHint hint) where T : struct
     {
@@ -45,11 +45,11 @@ public sealed class BufferObject : IDisposable
 
     public void Dispose()
     {
-        Dispose(true);
+        ReleaseUnmanagedResources();
         GC.SuppressFinalize(this);
     }
 
-    private void Dispose(bool disposing)
+    private void ReleaseUnmanagedResources()
     {
         if (_disposed || Handle == Constants.ErrorCode)
             return;

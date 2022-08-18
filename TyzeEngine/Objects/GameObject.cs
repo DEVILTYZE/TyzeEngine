@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using OpenTK.Graphics.OpenGL4;
 using TyzeEngine.Interfaces;
+using TyzeEngine.Resources;
 
 namespace TyzeEngine.Objects;
 
-public abstract class GameObject : IGameObject, IDisposable
+public abstract class GameObject : IGameObject
 {
     private bool _disposed;
-    private int _currentResourceIndex;
 
     ArrayObject IGameObject.ArrayObject { get; set; }
     BufferUsageHint IGameObject.DrawType
@@ -19,46 +19,36 @@ public abstract class GameObject : IGameObject, IDisposable
             if (!SaveStatus)
                 return BufferUsageHint.StaticDraw;
 
-            if (Body is not null)
-            {
-                if (Body.Visibility is VisibilityType.Collapsed or VisibilityType.Hidden)
-                    return BufferUsageHint.StaticDraw;
+            if (Body is null) 
+                return BufferUsageHint.StaticDraw;
+            
+            if (Body.Visibility is VisibilityType.Collapsed or VisibilityType.Hidden)
+                return BufferUsageHint.StaticDraw;
 
-                if (Body.Force.Length > 0)
-                    return BufferUsageHint.DynamicDraw;
-            }
-
+            if (Body.Force.Length > 0)
+                return BufferUsageHint.DynamicDraw;
+                
             return Scripts.Count switch
             {
                 > 0 when Triggers.Count > 0 => BufferUsageHint.StreamDraw,
                 > 0 when Triggers.Count == 0 => BufferUsageHint.DynamicDraw,
                 0 when Triggers.Count > 0 => BufferUsageHint.DynamicDraw,
                 _ => BufferUsageHint.StaticDraw
-            };;
+            };
         }
     }
 
-    public Uid Id { get; }
+    public Uid Id { get; } = new();
     public IModel Model { get; private set; }
-
     public IBody Body { get; set; }
-    public List<Uid> ResourceIds { get; set; }
-    public Uid ResourceId => ResourceIds.Count > 0 ? ResourceIds[_currentResourceIndex] : Uid.Zero;
-    public List<ITrigger> Triggers { get; private set; }
-    public List<IScript> Scripts { get; private set; }
+    public IResource Texture { get; set; }
+    public List<ITrigger> Triggers { get; private set; } = new();
+    public List<IScript> Scripts { get; private set; } = new();
     public bool SaveStatus { get; set; }
 
-    protected GameObject(IModel model)
-    {
-        _currentResourceIndex = 0;
-        Id = new Uid();
-        Model = model;
-        ResourceIds = new List<Uid>();
-        Triggers = new List<ITrigger>();
-        Scripts = new List<IScript>();
-    }
+    protected GameObject(IModel model) => Model = model;
 
-    protected GameObject(SaveGameObjectData saveData, bool notSave = false) : this(saveData.Model)
+    protected GameObject(SaveGameObjectData saveData) : this(saveData.Model)
     {
         Id = saveData.Id;
         
@@ -76,12 +66,6 @@ public abstract class GameObject : IGameObject, IDisposable
     
     ~GameObject() => Dispose(false);
 
-    public void NextResource() 
-        => _currentResourceIndex = _currentResourceIndex < ResourceIds.Count - 1 ? _currentResourceIndex + 1 : 0;
-
-    public void PreviousResource()
-        => _currentResourceIndex = _currentResourceIndex >= 0 ? _currentResourceIndex - 1 : ResourceIds.Count - 1;
-
     public override string ToString()
         => $"object: {Id.Value}\r\n" +
            string.Join(' ', Body.Position) + "\r\n" +
@@ -89,16 +73,15 @@ public abstract class GameObject : IGameObject, IDisposable
            string.Join(' ', Body.Rotation) + "\r\n" +
            string.Join(' ', Body.Color) +
            "\r\nend object;";
-
-
+    
     public IGameObject Clone()
     {
         var obj = CloneObject();
-        obj.Body = Body.Clone();
+        obj.Body = Body?.Clone();
         obj.Model = Model;
         obj.Scripts = Scripts;
         obj.Triggers = Triggers;
-        obj.ResourceIds = ResourceIds;
+        obj.Texture = Texture;
         obj.SaveStatus = SaveStatus;
 
         return obj;
@@ -118,9 +101,13 @@ public abstract class GameObject : IGameObject, IDisposable
             return;
 
         if (disposing)
-            ((IGameObject)this).ArrayObject.Dispose();
+            Body = null;
 
-        ResourceIds = null;
+        ReleaseUnmanagedResources();
+        
+        Texture = null;
         _disposed = true;
     }
+
+    private void ReleaseUnmanagedResources() => ((IGameObject)this).ArrayObject.Dispose();
 }

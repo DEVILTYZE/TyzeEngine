@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using TyzeEngine.Interfaces;
-using TyzeEngine.Resources;
 
 namespace TyzeEngine.GameStructure;
 
-public interface IPlace
+public interface IPlace : IDisposable
 {
     Uid Id { get; }
     IReadOnlyList<IPlace> NeighbourPlaces { get; set; }

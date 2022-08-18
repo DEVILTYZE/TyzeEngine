@@ -12,8 +12,7 @@ public class PolygonBody : Body
     public Vector3[] Vertices { get; private set; }
     public Vector3[] Normals { get; private set; }
 
-    public PolygonBody(IMaterial material) 
-        : base(material)
+    public PolygonBody(IMaterial material) : base(material)
     {
         AddMethod(typeof(PolygonBody), PhysicsGenerator.PolygonToPolygon);
         AddMethod(typeof(EllipseBody), PhysicsGenerator.PolygonToCircle);
@@ -29,25 +28,21 @@ public class PolygonBody : Body
         ComputeMass();
     }
 
-    protected override Body CloneBody()
-        => new PolygonBody(Material)
-        {
-            Vertices = Vertices,
-            Normals = Normals
-        };
+    protected override Body CloneBody() => new PolygonBody(Material)
+    {
+        Vertices = Vertices,
+        Normals = Normals
+    };
     
 
     protected sealed override void ComputeMass()
     {
-        Vector3 Cross(Vector3 vector1, Vector3 vector2)
-        {
-            var left = new System.Numerics.Vector3(vector1.X, vector1.Y, vector1.Z);
-            var right = new System.Numerics.Vector3(vector2.X, vector2.Y, vector2.Z);
-            var result = System.Numerics.Vector3.Cross(left, right);
-            
-            return new Vector3(result.X, result.Y, result.Z);
-        }
-        
+        Vector3 Cross(Vector3 vector1, Vector3 vector2) => new(
+            vector1.Y * vector2.Z - vector1.Z * vector2.Y,
+            vector1.Z * vector2.X - vector1.X * vector2.Z,
+            vector1.X * vector2.Y - vector1.Y * vector2.X
+        );
+
         var centroid = Vector3.Zero;
         var area = .0f;
         var inertia = .0f;
@@ -75,11 +70,11 @@ public class PolygonBody : Body
 
     private void SetNormals()
     {
-        Normals = new Vector3[Vertices.Length - 1];
+        Normals = new Vector3[Vertices.Length];
 
-        for (var i = 0; i < Vertices.Length - 1; ++i)
+        for (var i = 0; i < Normals.Length; ++i)
         {
-            var dVector = Vertices[i + 1] - Vertices[i];
+            var dVector = Vertices[i < Vertices.Length - 1 ? i + 1 : 0] - Vertices[i];
             Normals[i] = new Vector3(dVector.Y, -dVector.X, 0).Normalized();
         }
     }

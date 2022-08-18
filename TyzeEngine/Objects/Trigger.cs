@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using TyzeEngine.GameStructure;
+﻿using TyzeEngine.GameStructure;
 using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Objects;
@@ -10,16 +8,12 @@ public class Trigger : ITrigger
     private readonly int _placeId;
 
     protected event TriggerHandler Triggered;
-    
-    public Uid Id { get; }
+
+    public Uid Id { get; } = new();
     public bool IsTriggered { get; set; }
     public bool SaveStatus { get; }
 
-    private Trigger(bool notSave)
-    {
-        Id = new Uid();
-        SaveStatus = !notSave;
-    }
+    private Trigger(bool notSave) => SaveStatus = !notSave;
 
     public Trigger(IScene scene, int placeId, bool notSave = false) : this(notSave)
     {

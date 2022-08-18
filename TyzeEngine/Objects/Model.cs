@@ -6,13 +6,13 @@ using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Objects;
 
-public class Model : IModel, IDisposable
+public class Model : IModel
 {
     private bool _disposed;
     private uint[] _indices;
-    private readonly IVectorArray _texture;
+    private IVectorArray _texture;
 
-    public Uid Id { get; }
+    public Uid Id { get; } = new();
     public IReadOnlyList<Vector3> Vertices { get; private set; }
     public string Directory { get; }
     public string Name { get; }
@@ -26,7 +26,6 @@ public class Model : IModel, IDisposable
 
     private Model((Vector3[], uint[]) coordinates)
     {
-        Id = new Uid();
         Vertices = coordinates.Item1;
         _texture = new VectorArray(DefaultModels.GetDefaultTexture(Vertices), ArrayType.TwoDimensions);
         _indices = coordinates.Item2;
@@ -144,11 +143,11 @@ public class Model : IModel, IDisposable
 
         if (disposing)
         {
-            // something...
+            Vertices = null;
+            _indices = null;
+            _texture = null;
         }
 
-        Vertices = null;
-        _indices = null;
         _disposed = true;
     }
 }

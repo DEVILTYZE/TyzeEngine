@@ -6,6 +6,7 @@ namespace TyzeEngine;
 
 public delegate void TriggerHandler(TriggeredEventArgs args);
 public delegate void CollisionHandler(CollisionEventArgs args);
+public delegate void AnimationHandler();
 
 public class TriggeredEventArgs : EventArgs
 {

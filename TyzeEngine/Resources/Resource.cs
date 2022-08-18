@@ -2,7 +2,7 @@
 
 namespace TyzeEngine.Resources;
 
-public abstract class Resource : IResource, IDisposable
+public abstract class Resource : IResource
 {
     protected bool Disposed;
 
@@ -35,7 +35,12 @@ public abstract class Resource : IResource, IDisposable
         if (Disposed)
             return;
 
-        Path = null;
+        if (disposing)
+        {
+            Handle = 0;
+            Path = null;
+        }
+
         Disposed = true;
     }
 }

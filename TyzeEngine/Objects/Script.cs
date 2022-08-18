@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using OpenTK.Windowing.GraphicsLibraryFramework;
+﻿using OpenTK.Windowing.GraphicsLibraryFramework;
 using TyzeEngine.GameStructure;
 using TyzeEngine.Interfaces;
 

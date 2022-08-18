@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
+using System.Linq;
+using System.Threading.Tasks;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Resources;
 
@@ -9,9 +10,9 @@ namespace TyzeEngine.GameStructure;
 public sealed class Scene : IScene
 {
     private bool _loadError;
-    private Thread _loadingPlacesThread;
+    private Task _loadingPlacesTask;
 
-    Thread IScene.LoadingPlacesThread => _loadingPlacesThread;
+    Task IScene.LoadingPlacesTask => _loadingPlacesTask;
 
     public bool LoadError
     {
@@ -26,26 +27,25 @@ public sealed class Scene : IScene
     }
     public ILighting Lighting { get; }
     public IPlace CurrentPlace { get; }
-    public Dictionary<Uid, IResource> Resources { get; }
-    public Dictionary<Uid, IModel> Models { get; }
+    public SortedList<Uid, IResource> Resources { get; } = new();
+    public SortedList<Uid, IModel> Models { get; } = new();
     public TriggerHandler ReloadObjects { get; set; }
     public TriggerHandler LoadSceneHandler { get; set; }
     
     public Scene(IPlace spawnPlace)
     {
-        Resources = new Dictionary<Uid, IResource>();
-        Models = new Dictionary<Uid, IModel>();
         CurrentPlace = spawnPlace;
         LoadError = false;
     }
-    
+
+    ~Scene() => ReleaseUnmanagedResources();
+
     public void LoadPlace(TriggeredEventArgs args)
     {
-        if (_loadingPlacesThread is not null && _loadingPlacesThread.IsAlive)
-            _loadingPlacesThread.Join();
+        if (_loadingPlacesTask is not null && _loadingPlacesTask.Status == TaskStatus.Running)
+            _loadingPlacesTask.Wait();
         
-        _loadingPlacesThread = new Thread(LoadPlace);
-        _loadingPlacesThread.Start((int)args.Data);
+        _loadingPlacesTask = Task.Run(() => LoadPlace((int)args.Data));
     }
 
     public void Run()
@@ -75,16 +75,10 @@ public sealed class Scene : IScene
         }
     }
 
-    public void EnableResource(Uid id)
+    public void Dispose()
     {
-        if (Resources.ContainsKey(id))
-            Resources[id].Enable();
-    }
-
-    public void DisableResource(Uid id)
-    {
-        if (Resources.ContainsKey(id))
-            Resources[id].Disable();
+        ReleaseUnmanagedResources();
+        GC.SuppressFinalize(this);
     }
 
     private void LoadPlace(object obj)
@@ -98,15 +92,16 @@ public sealed class Scene : IScene
             {
                 if (neighbourPlace.Id != id)
                 {
-                    (neighbourPlace as IDisposable)?.Dispose();
+                    neighbourPlace.Dispose();
                     neighbourPlace.Loaded = false;
                 }
                 else
+                {
                     place = neighbourPlace;
+                    break;
+                }
             }
 
-            GC.Collect();
-            
             if (place is null)
                 return;
         }
@@ -135,5 +130,16 @@ public sealed class Scene : IScene
     {
         foreach (var id in ids)
             Resources[id].Load();
+    }
+
+    private void ReleaseUnmanagedResources()
+    {
+        var places = new[] { CurrentPlace }.Concat(CurrentPlace.NeighbourPlaces);
+
+        foreach (var place in places)
+            place?.Dispose();
+        
+        foreach (var (_, resource) in Resources)
+            resource?.Dispose();
     }
 }

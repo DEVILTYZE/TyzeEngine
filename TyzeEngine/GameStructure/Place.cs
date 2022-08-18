@@ -5,46 +5,43 @@ using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.GameStructure;
 
-public sealed class Place : IPlace, IDisposable
+public sealed class Place : IPlace
 {
     private bool _disposed;
-    
-    public Uid Id { get; }
+
+    public Uid Id { get; } = new();
     public IReadOnlyList<IPlace> NeighbourPlaces { get; set; }
     public List<IGameObject> GameObjects { get; }
     public bool Loaded { get; set; }
 
     public Place(IReadOnlyList<IPlace> neighbourPlaces, List<IGameObject> objects)
     {
-        Id = new Uid();
         NeighbourPlaces = neighbourPlaces;
         GameObjects = objects;
-        Loaded = false;
     }
 
-    ~Place() => Dispose(false);
+    ~Place() => ReleaseUnmanagedResources();
 
     public void Dispose()
     {
-        Dispose(true);
+        ReleaseUnmanagedResources();
         GC.SuppressFinalize(this);
     }
 
-    IEnumerable<Uid> IPlace.GetResourceIds() => GameObjects.SelectMany(obj => obj.ResourceIds ?? new List<Uid>());
+    IEnumerable<Uid> IPlace.GetResourceIds() 
+        => from texture in GameObjects.Select(obj => obj.Texture) 
+            where texture is not null 
+            select texture.Id;
 
-    private void Dispose(bool disposing)
+    private void ReleaseUnmanagedResources()
     {
         if (_disposed)
             return;
 
-        if (disposing)
-        {
-        }
-        
         NeighbourPlaces = null;
 
         foreach (var obj in GameObjects)
-            (obj as IDisposable)?.Dispose();
+            obj?.Dispose();
 
         _disposed = true;
     }

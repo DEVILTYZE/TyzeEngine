@@ -19,11 +19,19 @@ public sealed class TyzeWindow : GameWindow
     private readonly IReadOnlyList<IScript> _scripts;
     private Shader _shader;
     private Matrix4 _view, _projection;
+    
+    // AUDIO
     private ALDevice _device;
     private ALContext _context;
+    
+    // FPS
     private double _time;
     private int _frames;
     private readonly string _title;
+
+    // PROPERTIES
+    private IScene CurrentScene => _scenes[_currentSceneIndex];
+    private IPlace CurrentPlace => CurrentScene.CurrentPlace;
 
     public TriggerHandler TriggerLoadObjects { get; }
     public TriggerHandler TriggerNextScene { get; }
@@ -40,12 +48,12 @@ public sealed class TyzeWindow : GameWindow
         VSync = VSyncMode.On;
         _scenes = scenes;
         _currentSceneIndex = 0;
-        _scenes[_currentSceneIndex].ReloadObjects = TriggerLoadObjects;
-        _scenes[_currentSceneIndex].LoadSceneHandler = TriggerNextScene;
+        CurrentScene.ReloadObjects = TriggerLoadObjects;
+        CurrentScene.LoadSceneHandler = TriggerNextScene;
         _scripts = scripts ?? new List<IScript>();
 
         foreach (var script in _scripts)
-            script.AddArgs(KeyboardState, _scenes[_currentSceneIndex]);
+            script.AddArgs(KeyboardState, CurrentScene);
         
         // SHOW FPS настройки.
         _title = nativeWindowSettings.Title;
@@ -69,7 +77,7 @@ public sealed class TyzeWindow : GameWindow
         _projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(45f), 
             Size.X / (float)Size.Y, .1f, 100);
 
-        _scenes[_currentSceneIndex].Run();
+        CurrentScene.Run();
         LoadObjects(new TriggeredEventArgs(false));
     }
 
@@ -109,11 +117,7 @@ public sealed class TyzeWindow : GameWindow
     {
         _shader.Dispose();
         LoadQueue.Clear();
-        
-        foreach (var place in _scenes[_currentSceneIndex].CurrentPlace.NeighbourPlaces)
-            ((IDisposable)place).Dispose();
-
-        ((IDisposable)_scenes[_currentSceneIndex].CurrentPlace).Dispose();
+        CurrentPlace?.Dispose();
         ALC.MakeContextCurrent(ALContext.Null);
         ALC.DestroyContext(_context);
         ALC.CloseDevice(_device);
@@ -123,7 +127,7 @@ public sealed class TyzeWindow : GameWindow
     
     private void LoadObjects(TriggeredEventArgs args)
     {
-        var objects = GetObjects(args is not null && (bool)args.Data);
+        var objects = args is not null && (bool)args.Data ? GetNewObjects() : GetCurrentObjects();
         const int stride = Constants.VertexStride + Constants.TextureStride + Constants.ColorStride;
         
         // Загрузка объекта.
@@ -166,8 +170,7 @@ public sealed class TyzeWindow : GameWindow
             
             obj.ArrayObject.Disable();
             // Связывание ресурсов для текущего объекта.
-            foreach (var resourceId in obj.ResourceIds)
-                _scenes[_currentSceneIndex].EnableResource(resourceId);
+            obj.Texture?.Enable();
         }
     }
 
@@ -193,41 +196,34 @@ public sealed class TyzeWindow : GameWindow
             
             return rotationZ * Matrix4.CreateTranslation(body.Position);
         }
-        void SetMatrices(IGameObject obj)
-        {
-            var model = GetMatrix(obj.Body);
-            _shader.SetMatrix4("model", model);
-            _shader.SetMatrix4("view", _view);
-            _shader.SetMatrix4("projection", _projection);
-        }
         
-        var objects = GetObjects(false).ToList();
+        var objects = GetCurrentObjects().ToList();
         
         foreach (var obj in objects)
         {
             obj.ArrayObject.Enable();
-            _scenes[_currentSceneIndex].EnableResource(obj.ResourceId);
-            SetMatrices(obj);
+            obj.Texture?.Enable();
+            _shader.SetMatrix4("model", GetMatrix(obj.Body));
+            _shader.SetMatrix4("view", _view);
+            _shader.SetMatrix4("projection", _projection);
             obj.ArrayObject.Draw(DrawElementsType.UnsignedInt);
-            _scenes[_currentSceneIndex].DisableResource(obj.ResourceId);
+            obj.Texture?.Disable();
         }
 
-        objects = objects.Where(obj => obj.Body is not null).ToList();
+        objects = objects.Where(obj => obj.Body is not null && obj.Body.IsEnabled).ToList();
         PhysicsGenerator.DetermineCollision(objects);
     }
 
     private void LoadScene(TriggeredEventArgs args) => _currentSceneIndex = (int)args.Data;
 
-    private IEnumerable<IGameObject> GetObjects(bool unloaded)
+    private IEnumerable<IGameObject> GetCurrentObjects()
+        => new[] { CurrentPlace }.Concat(CurrentPlace.NeighbourPlaces).SelectMany(place => place.GameObjects);
+
+    private IEnumerable<IGameObject> GetNewObjects()
     {
-        var currentPlace = _scenes[_currentSceneIndex].CurrentPlace;
-
-        if (!unloaded)
-            return new[] { currentPlace }.Concat(currentPlace.NeighbourPlaces).SelectMany(place => place.GameObjects);
-
         var objects = LoadQueue.TakeObjects().ToArray();
-        currentPlace.GameObjects.AddRange(objects);
-        _scenes[_currentSceneIndex].LoadResources();
+        CurrentPlace.GameObjects.AddRange(objects);
+        CurrentScene.LoadResources();
 
         return objects;
     }
@@ -250,7 +246,6 @@ public sealed class TyzeWindow : GameWindow
         var attribute = 1;
         _device = ALC.OpenDevice(null);
         _context = ALC.CreateContext(_device, ref attribute);
-    
         ALC.MakeContextCurrent(_context);
     
         var version = AL.Get(ALGetString.Version);

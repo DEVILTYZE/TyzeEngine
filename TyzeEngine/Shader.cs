@@ -52,7 +52,7 @@ public sealed class Shader : IDisposable
         }
     }
 
-    ~Shader() => GL.DeleteProgram(Handle);
+    ~Shader() => ReleaseUnmanagedResources();
     
     public void Enable()
     {
@@ -78,11 +78,11 @@ public sealed class Shader : IDisposable
 
     public void Dispose()
     {
-        Dispose(true);
+        ReleaseUnmanagedResources();
         GC.SuppressFinalize(this);
     }
 
-    private void Dispose(bool disposing)
+    private void ReleaseUnmanagedResources()
     {
         if (_disposed) 
             return;

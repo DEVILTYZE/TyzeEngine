@@ -87,9 +87,9 @@ public class Audio : Resource
         audioInfo.Open(Path);
         var frequency = int.Parse(audioInfo.Get(StreamKind.Audio, 0, "SamplingRate"));
         var countOfChannels = int.Parse(audioInfo.Get(StreamKind.Audio, 0, "Channel(s)"));
-        //var bitDepth = int.Parse(audioInfo.Get(StreamKind.Audio, 0, "BitDepth"));
+        var bitDepth = int.Parse(audioInfo.Get(StreamKind.Audio, 0, "BitDepth"));
         var duration = int.Parse(audioInfo.Get(StreamKind.Audio, 0, "Duration"));
-        var format = GetFormat(countOfChannels, 16);
+        var format = GetFormat(countOfChannels, bitDepth);
         audioInfo.Close();
 
         return (format, frequency, duration);

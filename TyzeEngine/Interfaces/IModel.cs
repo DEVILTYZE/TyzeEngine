@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using OpenTK.Mathematics;
 
 namespace TyzeEngine.Interfaces;
 
-public interface IModel
+public interface IModel : IDisposable
 {
     Uid Id { get; }
     IReadOnlyList<Vector3> Vertices { get; }

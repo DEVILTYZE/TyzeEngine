@@ -1,12 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using OpenTK.Graphics.OpenGL4;
-using OpenTK.Mathematics;
-using TyzeEngine.Physics;
 using TyzeEngine.Resources;
 
 namespace TyzeEngine.Interfaces;
 
-public interface IGameObject
+public interface IGameObject : IDisposable
 {
     internal ArrayObject ArrayObject { get; set; }
     internal BufferUsageHint DrawType { get; }
@@ -14,12 +13,8 @@ public interface IGameObject
     Uid Id { get; }
     IModel Model { get; }
     IBody Body { get; set; }
-    List<Uid> ResourceIds { get; set; }
-    Uid ResourceId { get; }
+    IResource Texture { get; set; }
     List<ITrigger> Triggers { get; }
     List<IScript> Scripts { get; }
     bool SaveStatus { get; set; }
-
-    void NextResource();
-    void PreviousResource();
 }

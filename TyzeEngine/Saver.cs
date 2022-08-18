@@ -15,7 +15,7 @@ public readonly record struct SaveGameObjectData // TODO: SAVE BODY TYPE
     private readonly string _objectInfo;
     
     public Uid Id { get; }
-    public Uid[] ResourceIds { get; }
+    public Uid ResourceId { get; }
     public IModel Model { get; }
     public Dictionary<Uid, bool> TriggerDictionary { get; }
     public Vector3 Position { get; }
@@ -27,7 +27,7 @@ public readonly record struct SaveGameObjectData // TODO: SAVE BODY TYPE
     public SaveGameObjectData(IGameObject obj)
     {
         Id = obj.Id;
-        ResourceIds = obj.ResourceIds.ToArray();
+        ResourceId = obj.Texture.Id;
         Model = obj.Model;
         var triggerList = obj.Triggers.Where(trigger => trigger.SaveStatus).ToList();
         TriggerDictionary = new Dictionary<Uid, bool>(triggerList.Select(trigger 
@@ -40,10 +40,10 @@ public readonly record struct SaveGameObjectData // TODO: SAVE BODY TYPE
         _objectInfo = obj.ToString();
     }
     
-    public SaveGameObjectData(Uid[] resourceIds, byte[] data)
+    public SaveGameObjectData(Uid resourceId, byte[] data)
     {
         const int count = 4;
-        ResourceIds = resourceIds;
+        ResourceId = resourceId;
         Id = new Uid(BitConverter.ToUInt32(data));
         //Model = new Uid(BitConverter.ToUInt32(data, sizeof(int)));
         Model = new Model(string.Empty, string.Empty);
