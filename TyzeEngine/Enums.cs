@@ -22,3 +22,16 @@ public enum BodyVisualType
     Texture = 1,
     ColorAndTexture = 2
 }
+
+public enum RunMode
+{
+    Debug = 0,
+    Release = 1
+}
+
+public enum SaveStatus
+{
+    Unknown = 0,
+    Succeed = 1,
+    Error = 2
+}

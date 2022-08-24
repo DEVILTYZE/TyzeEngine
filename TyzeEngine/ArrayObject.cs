@@ -4,17 +4,18 @@ using OpenTK.Graphics.OpenGL4;
 
 namespace TyzeEngine;
 
-public sealed class ArrayObject : IDisposable
+internal sealed class ArrayObject : IDisposable
 {
     private readonly List<int> _attributeList;
     private readonly List<BufferObject> _bufferList;
     private bool _disposed;
     private int _count;
-    
-    public int Handle { get; }
-    public bool IsEnabled { get; private set; }
 
-    public ArrayObject()
+    internal static PrimitiveType Primitive { get; set; } = PrimitiveType.Triangles;
+    internal int Handle { get; }
+    internal bool IsEnabled { get; private set; }
+
+    internal ArrayObject()
     {
         Handle = GL.GenVertexArray();
         IsEnabled = false;
@@ -25,19 +26,19 @@ public sealed class ArrayObject : IDisposable
     
     ~ArrayObject() => ReleaseUnmanagedResources();
 
-    public void Enable()
+    internal void Enable()
     {
         GL.BindVertexArray(Handle);
         IsEnabled = true;
     }
 
-    public void Disable()
+    internal void Disable()
     {
         GL.BindVertexArray(0);
         IsEnabled = false;
     }
 
-    public void AttachBuffer(BufferObject buffer, int count)
+    internal void AttachBuffer(BufferObject buffer, int count)
     {
         if (!IsEnabled)
             Enable();
@@ -49,7 +50,7 @@ public sealed class ArrayObject : IDisposable
         _bufferList.Add(buffer);
     }
 
-    public void EnableAttribute(int locationAttribute, int count, VertexAttribPointerType type, int stride, int offset)
+    internal void EnableAttribute(int locationAttribute, int count, VertexAttribPointerType type, int stride, int offset)
     {
         _attributeList.Add(locationAttribute);
         GL.EnableVertexAttribArray(locationAttribute);
@@ -57,31 +58,31 @@ public sealed class ArrayObject : IDisposable
         GL.EnableVertexAttribArray(0);
     }
 
-    public void DisableAttributes()
+    internal void DisableAttributes()
     {
         foreach (var locationAttribute in _attributeList)
             GL.DisableVertexAttribArray(locationAttribute);
     }
 
-    public void Draw() => Draw(0, _count);
+    internal void Draw() => Draw(0, _count);
 
-    public void Draw(DrawElementsType type) => Draw(0, _count, type);
+    internal void Draw(DrawElementsType type) => Draw(0, _count, type);
     
-    public void Draw(int startIndex, int endIndex)
+    internal void Draw(int startIndex, int endIndex)
     {
         if (!IsEnabled)
             Enable();
 
-        GL.DrawArrays(PrimitiveType.Triangles, startIndex, endIndex);
+        GL.DrawArrays(Primitive, startIndex, endIndex);
         Disable();
     }
 
-    public void Draw(int startIndex, int endIndex, DrawElementsType type)
+    internal void Draw(int startIndex, int endIndex, DrawElementsType type)
     {
         if (!IsEnabled)
             Enable();
 
-        GL.DrawElements(PrimitiveType.Triangles, endIndex, type, startIndex);
+        GL.DrawElements(Primitive, endIndex, type, startIndex);
         Disable();
     }
 

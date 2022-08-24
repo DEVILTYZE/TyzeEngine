@@ -4,12 +4,11 @@ using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.GameStructure;
 
-public interface IPlace : IDisposable
+public interface IPlace : IDisposable, IIdObject
 {
-    Uid Id { get; }
-    IReadOnlyList<IPlace> NeighbourPlaces { get; set; }
-    List<IGameObject> GameObjects { get; }
+    List<IPlace> NeighbourPlaces { get; set; }
+    List<IGameObject> GameObjects { get; set; }
     bool Loaded { get; set; }
 
-    internal IEnumerable<Uid> GetResourceIds();
+    internal IEnumerable<UId> GetResourceIds();
 }

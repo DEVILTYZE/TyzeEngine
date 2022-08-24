@@ -1,116 +1,75 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using OpenTK.Mathematics;
-using TyzeEngine.Interfaces;
-using TyzeEngine.Objects;
 
 namespace TyzeEngine;
-
-public readonly record struct SaveGameObjectData // TODO: SAVE BODY TYPE
-{
-    private readonly string _objectInfo;
-    
-    public Uid Id { get; }
-    public Uid ResourceId { get; }
-    public IModel Model { get; }
-    public Dictionary<Uid, bool> TriggerDictionary { get; }
-    public Vector3 Position { get; }
-    public Vector3 Size { get; }
-    public Vector3 Rotation { get; }
-    public Vector4 Color { get; }
-    public string BodyName { get; }
-    
-    public SaveGameObjectData(IGameObject obj)
-    {
-        Id = obj.Id;
-        ResourceId = obj.Texture.Id;
-        Model = obj.Model;
-        var triggerList = obj.Triggers.Where(trigger => trigger.SaveStatus).ToList();
-        TriggerDictionary = new Dictionary<Uid, bool>(triggerList.Select(trigger 
-            => new KeyValuePair<Uid, bool>(trigger.Id, trigger.IsTriggered)));
-        Position = obj.Body.Position;
-        Size = obj.Body.Scale;
-        Rotation = obj.Body.Rotation;
-        Color = obj.Body.Color;
-        BodyName = obj.Body.GetType().ToString();
-        _objectInfo = obj.ToString();
-    }
-    
-    public SaveGameObjectData(Uid resourceId, byte[] data)
-    {
-        const int count = 4;
-        ResourceId = resourceId;
-        Id = new Uid(BitConverter.ToUInt32(data));
-        //Model = new Uid(BitConverter.ToUInt32(data, sizeof(int)));
-        Model = new Model(string.Empty, string.Empty);
-        var triggersCount = BitConverter.ToInt32(data, sizeof(int) * 2);
-        TriggerDictionary = new Dictionary<Uid, bool>(triggersCount);
-        
-        for (var i = 0; i < triggersCount; ++i)
-        {
-            var intIndex = i * Constants.SizeOfTrigger + 3 * sizeof(int);
-            var boolIndex = i * Constants.SizeOfTrigger + 4 * sizeof(int);
-            TriggerDictionary.Add(new Uid(BitConverter.ToInt32(data, intIndex)), BitConverter.ToBoolean(data, boolIndex));
-        }
-
-        var str = Encoding.UTF8.GetString(data[(sizeof(int) * 3 + Constants.SizeOfTrigger * triggersCount)..]);
-        var parts = str.Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
-        var floatArray = new List<float[]>(count);
-        
-        for (var i = 0; i < count; ++i)
-            floatArray.Add(parts[i + 1].Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .Select(float.Parse).ToArray());
-        
-        Position = new Vector3(floatArray[0][0], floatArray[0][1], floatArray[0][2]);
-        Size = new Vector3(floatArray[1][0], floatArray[1][1], floatArray[1][2]);
-        Rotation = new Vector3(floatArray[2][0], floatArray[2][1], floatArray[2][2]);
-        Color = new Vector4(floatArray[3][0], floatArray[3][1], floatArray[3][2], floatArray[3][3]);
-        BodyName = parts[count + 1];
-        _objectInfo = string.Empty;
-    }
-
-    public byte[] GetData()
-    {
-        var id = BitConverter.GetBytes(Id.Value);
-        var modelId = Encoding.UTF8.GetBytes(Model.ToString());
-        var triggerCount = BitConverter.GetBytes(TriggerDictionary.Count);
-        var triggers = TriggerDictionary.SelectMany(pair => BitConverter.GetBytes(pair.Key.Value)
-            .Concat(BitConverter.GetBytes(pair.Value))).ToArray();
-        var objectInfo = Encoding.UTF8.GetBytes(_objectInfo);
-
-        return id.Concat(modelId).Concat(triggerCount).Concat(triggers).Concat(objectInfo).ToArray();
-    }
-}
 
 public class Saver
 {
     private string _saveFileName;
 
-    public void SaveObjects(IReadOnlyList<IGameObject> objects)
-    {
-        _saveFileName = Path.Combine(Constants.SavesDirectory, Constants.DefaultSaveName + Constants.SaveExtension);
+    public SaveStatus LastSaveStatus { get; private set; } = SaveStatus.Unknown;
 
-        ThreadPool.QueueUserWorkItem(_ => SaveObjects((object)objects));
+    public void Save(byte[] data, string filePath = null)
+    {
+        LastSaveStatus = SaveStatus.Unknown;
+        _saveFileName = string.IsNullOrEmpty(filePath) 
+            ? Path.Combine(Constants.SavesDirectory, Constants.DefaultSaveName + Constants.SaveExtension)
+            : filePath;
+
+        ThreadPool.QueueUserWorkItem(_ => Save((object)data));
     }
 
-    private void SaveObjects(object obj)
+    public static byte[] Load(string filePath = null)
     {
-        var objects = (IReadOnlyList<IGameObject>)obj;
-        var stream = File.OpenWrite(_saveFileName);
+        if (string.IsNullOrEmpty(filePath))
+            throw new ArgumentNullException(nameof(filePath), "File path is null.");
+
+        if (!File.Exists(filePath))
+            throw new ArgumentException($"Save file {Path.GetFileName(filePath)} doesn't exists.", nameof(filePath));
+
+        const int defaultLength = 256;
+        var byteList = new List<byte>();
+        using var fs = File.Open(filePath, FileMode.Open);
         
-        foreach (var gameObject in objects)
-            Save(new SaveGameObjectData(gameObject), stream);
-        
-        stream.Close();
+        while (fs.CanRead)
+        {
+            var data = new byte[defaultLength];
+            var length = fs.Read(data, 0, data.Length);
+
+            if (length < defaultLength)
+            {
+                data = data[..length];
+                byteList.AddRange(data);
+                break;
+            }
+                
+            byteList.AddRange(data);
+        }
+
+        return byteList.ToArray();
     }
 
-    protected virtual void Save(object saveData, FileStream stream)
+    private void Save(object obj)
     {
-        var data = ((SaveGameObjectData)saveData).GetData();
-        stream.Write(data, 0, data.Length);
+        try
+        {
+            var data = (byte[])obj;
+            var stream = File.OpenWrite(_saveFileName);
+            SaveInFile(data, stream);
+            stream.Close();
+            LastSaveStatus = SaveStatus.Succeed;
+        }
+        catch (Exception)
+        {
+            LastSaveStatus = SaveStatus.Error;
+        }
+    }
+
+    protected virtual void SaveInFile(object data, FileStream stream)
+    {
+        var dataArray = (byte[])data;
+        stream.Write(dataArray, 0, dataArray.Length);
     }
 }

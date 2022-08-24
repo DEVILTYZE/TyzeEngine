@@ -3,35 +3,33 @@ using OpenTK.Mathematics;
 
 namespace TyzeEngine;
 
-public static class Constants
+internal static class Constants
 {
     // DIRECTORIES
-    public const string AssetsDirectory = "assets\\";
-    public const string ModelsDirectory = AssetsDirectory + "models\\";
-    public const string SystemDirectory = AssetsDirectory + "system\\";
-    public const string DefaultModelsDirectory = ModelsDirectory + "default\\";
-    public const string ShadersDirectory = AssetsDirectory + "shaders\\";
-    public const string SavesDirectory = SystemDirectory + "saves\\";
+    internal const string AssetsDirectory = "assets\\";
+    internal const string ModelsDirectory = AssetsDirectory + "models\\";
+    internal const string SystemDirectory = AssetsDirectory + "system\\";
+    internal const string DefaultModelsDirectory = ModelsDirectory + "default\\";
+    internal const string ShadersDirectory = AssetsDirectory + "shaders\\";
+    internal const string SavesDirectory = SystemDirectory + "saves\\";
     
     // FILES
-    public const string ShaderVertTexturePath = ShadersDirectory + "shader.vert";
-    public const string ShaderFragTexturePath = ShadersDirectory + "shader.frag";
-    public const string FileNotExists = SystemDirectory + "error.png"; // Path
-    public const string DefaultModelName = "model";
-    public static readonly string DefaultSaveName = "save_" + DateTime.Now.ToString("ddMMyyyyHHmmss");
-    public const string SaveExtension = ".sav";
-    public const string TestName = "Test application";
+    internal const string ShaderVertTexturePath = ShadersDirectory + "shader.vert";
+    internal const string ShaderFragTexturePath = ShadersDirectory + "shader.frag";
+    internal const string FileNotExists = SystemDirectory + "error.png"; // Path
+    internal const string DefaultModelName = "model";
+    internal static readonly string DefaultSaveName = "save_" + DateTime.Now.ToString("ddMMyyyyHHmmss");
+    internal const string SaveExtension = ".sav";
     
     // DEFAULT VALUES
-    public const int DefaultDelay = 25;
-    public const int ErrorCode = -1;
-    public const int SizeOfTrigger = sizeof(int) + sizeof(bool);
-    public const int VertexStride = VertexLength * sizeof(float);
-    public const int VertexLength = 3;
-    public const int ColorStride = ColorLength * sizeof(float);
-    public const int ColorLength = 4;
-    public const int TextureStride = TextureLength * sizeof(float);
-    public const int TextureLength = 2;
+    internal const int DefaultDelay = 25;
+    internal const int ErrorCode = -1;
+    internal const int Vector2Length = 2;
+    internal const int Vector2Stride = Vector2Length * sizeof(float);
+    internal const int Vector3Length = 3;
+    internal const int Vector3Stride = Vector3Length * sizeof(float);
+    internal const int Vector4Length = 4;
+    internal const int Vector4Stride = Vector4Length * sizeof(float);
     internal static readonly Vector3 DefaultPosition = new(0, 0, 0);
     internal static readonly Vector3 DefaultSize = new(1, 1, 1);
     internal static readonly Vector3 DefaultSize2D = new(1, 1, 0);
@@ -40,13 +38,13 @@ public static class Constants
     internal static readonly Vector4 NullColor = new(0, 0, 0, 0);
     
     // AUDIO
-    public const int Frequency441 = 44100;
-    public const int BitDepth8 = 8;
-    public const int BitDepth16 = BitDepth8 * 2;
-    public const float Duration = .75f;
+    internal const int Frequency441 = 44100;
+    internal const int BitDepth8 = 8;
+    internal const int BitDepth16 = BitDepth8 * 2;
+    internal const float Duration = .8f;
 
     // RESOURCE
-    public static readonly string[] ImageExtensions = { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".ico", ".tiff", ".svg" };
-    public static readonly string[] AudioExtensions = { ".mp3", ".wav", ".flac", ".aiff" };
-    public static readonly string[] VideoExtensions = { ".avi", ".mp4", ".mov", ".flv", ".wmv", ".mpeg" };
+    internal static readonly string[] ImageExtensions = { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".ico", ".tiff", ".svg" };
+    internal static readonly string[] AudioExtensions = { ".mp3", ".wav", ".flac", ".aiff" };
+    internal static readonly string[] VideoExtensions = { ".avi", ".mp4", ".mov", ".flv", ".wmv", ".mpeg" };
 }

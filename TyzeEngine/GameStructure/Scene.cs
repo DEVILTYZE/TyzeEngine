@@ -9,11 +9,12 @@ namespace TyzeEngine.GameStructure;
 
 public sealed class Scene : IScene
 {
-    private bool _loadError;
+    private bool _loadError, _disposed;
     private Task _loadingPlacesTask;
 
     Task IScene.LoadingPlacesTask => _loadingPlacesTask;
 
+    public UId Id { get; set; } = new();
     public bool LoadError
     {
         get
@@ -26,9 +27,9 @@ public sealed class Scene : IScene
         private init => _loadError = value;
     }
     public ILighting Lighting { get; }
-    public IPlace CurrentPlace { get; }
-    public SortedList<Uid, IResource> Resources { get; } = new();
-    public SortedList<Uid, IModel> Models { get; } = new();
+    public IPlace CurrentPlace { get; set; }
+    public SortedList<UId, IResource> Resources { get; } = new();
+    public SortedList<UId, IModel> Models { get; } = new();
     public TriggerHandler ReloadObjects { get; set; }
     public TriggerHandler LoadSceneHandler { get; set; }
     
@@ -56,20 +57,20 @@ public sealed class Scene : IScene
         // Other settings...
     }
 
-    public void LoadScene(Uid id) => LoadSceneHandler?.Invoke(new TriggeredEventArgs(id));
+    public void LoadScene(UId id) => LoadSceneHandler?.Invoke(new TriggeredEventArgs(id));
 
     public void LoadResources()
     {
         while (LoadQueue.HasNewResources)
         {
-            var resource = LoadQueue.TakeLastResource();
+            var resource = LoadQueue.TakeResource();
             resource.Load();
             Resources.Add(resource.Id, resource);
         }
 
         while (LoadQueue.HasNewModels)
         {
-            var model = LoadQueue.TakeLastModel();
+            var model = LoadQueue.TakeModel();
             model.Load();
             Models.Add(model.Id, model);
         }
@@ -81,9 +82,16 @@ public sealed class Scene : IScene
         GC.SuppressFinalize(this);
     }
 
+    public static IScene Find(string name)
+    {
+        var isFound = Game.Scenes.TryGetValue(name, out var value);
+
+        return isFound ? value : null;
+    }
+
     private void LoadPlace(object obj)
     {
-        var id = (Uid)obj;
+        var id = (UId)obj;
         IPlace place = null;
 
         if (CurrentPlace.Id != id)
@@ -108,7 +116,7 @@ public sealed class Scene : IScene
         else
             place = CurrentPlace;
 
-        var resourceIds = new HashSet<Uid>(place.GetResourceIds());
+        var resourceIds = new HashSet<UId>(place.GetResourceIds());
 
         foreach (var neighbourPlace in place.NeighbourPlaces)
         {
@@ -126,7 +134,7 @@ public sealed class Scene : IScene
             neighbourPlace.Loaded = true;
     }
     
-    private void LoadResources(IEnumerable<Uid> ids)
+    private void LoadResources(IEnumerable<UId> ids)
     {
         foreach (var id in ids)
             Resources[id].Load();
@@ -134,6 +142,9 @@ public sealed class Scene : IScene
 
     private void ReleaseUnmanagedResources()
     {
+        if (_disposed)
+            return;
+        
         var places = new[] { CurrentPlace }.Concat(CurrentPlace.NeighbourPlaces);
 
         foreach (var place in places)
@@ -141,5 +152,7 @@ public sealed class Scene : IScene
         
         foreach (var (_, resource) in Resources)
             resource?.Dispose();
+
+        _disposed = true;
     }
 }

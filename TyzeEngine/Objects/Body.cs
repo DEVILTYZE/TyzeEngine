@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Physics;
@@ -8,20 +7,43 @@ namespace TyzeEngine.Objects;
 
 public abstract class Body : IBody
 {
-    private readonly Dictionary<Type, Func<IBody, IBody, CollisionEventArgs>> _collisionMethods;
-    private readonly Dictionary<Uid, Vector3> _forces;
+    private readonly Dictionary<UId, Vector3> _forces = new();
+    private Vector3 _rotation, _scale;
 
     public Vector3 Position { get; set; } = Constants.DefaultPosition;
-    public Vector3 Scale { get; set; } = Constants.DefaultSize2D;
-    public Vector3 Rotation { get; set; } = Constants.DefaultRotation;
-    public Matrix3 RotationMatrix => Matrix3.Identity * Matrix3.CreateRotationX(Rotation.X) * Matrix3.CreateRotationY(
-        Rotation.Y) * Matrix3.CreateRotationZ(Rotation.Z);
+    public Vector3 Scale
+    {
+        get => _scale;
+        set
+        {
+            var divide = Vector3.Zero;
+
+            for (var i = 0; i < 3; ++i)
+                if (_scale[i] != 0)
+                    divide[i] = value[i] / _scale[i];
+
+            _scale = value;
+            RecomputeBodyParameters(divide);
+        }
+    }
+    public Vector3 Rotation
+    {
+        get => _rotation;
+        set
+        {
+            _rotation = value;
+
+            RotationMatrix = RotationMatrix * Matrix3.CreateRotationX(Rotation.X) * Matrix3.CreateRotationY(
+                Rotation.Y) * Matrix3.CreateRotationZ(Rotation.Z);
+        }
+    }
+    public Matrix3 RotationMatrix { get; private set; }
     public Vector4 Color { get; set; } = Constants.DefaultColor;
     public VisibilityType Visibility { get; set; } = VisibilityType.Visible;
     public BodyVisualType Visual { get; set; } = BodyVisualType.Color;
 
-    public int Layer { get; set; }
-    public IMaterial Material { get; }
+    public ushort CollisionLayer { get; set; }
+    public IMaterial Material { get; private set; }
     public float Mass { get; private set; }
     public float InverseMass { get; private set; }
     public float Inertia { get; private set; }
@@ -43,15 +65,14 @@ public abstract class Body : IBody
         }
     }
     public Vector3 GravityForce { get; set; }
-    public IReadOnlyDictionary<Type, Func<IBody, IBody, CollisionEventArgs>> CollisionMethods => _collisionMethods;
     public bool IsEnabled { get; set; }
 
     protected Body(IMaterial material)
     {
+        Scale = Constants.DefaultSize2D;
+        Rotation = Constants.DefaultRotation;
         Material = material;
         SetMassAndInertia(0, 0);
-        _forces = new Dictionary<Uid, Vector3>();
-        _collisionMethods = new Dictionary<Type, Func<IBody, IBody, CollisionEventArgs>>();
     }
 
     public void SetColor(byte r, byte g, byte b, byte a) => Color = new Vector4(
@@ -61,17 +82,7 @@ public abstract class Body : IBody
         (float)a / byte.MaxValue
     );
 
-    public void AddMethod(Type bodyType, Func<IBody, IBody, CollisionEventArgs> method)
-    {
-        if (_collisionMethods.ContainsKey(bodyType))
-            _collisionMethods[bodyType] = method;
-        else
-            _collisionMethods.Add(bodyType, method);
-    }
-
-    public abstract CollisionEventArgs IsCollisionTo(IBody bodyA, IBody bodyB);
-
-    public void AddForce(Uid id, Vector3 force)
+    public void AddForce(UId id, Vector3 force)
     {
         if (_forces.ContainsKey(id))
             _forces[id] = force;
@@ -79,7 +90,7 @@ public abstract class Body : IBody
             _forces.Add(id, force);
     }
 
-    public void RemoveForce(Uid id) => _forces.Remove(id);
+    public void RemoveForce(UId id) => _forces.Remove(id);
     
     public void SetMassAndInertia(float mass, float inertia)
     {
@@ -91,7 +102,7 @@ public abstract class Body : IBody
 
     public IBody Clone()
     {
-        var obj = CloneBody();
+        var obj = DeepClone();
         obj.Centroid = Centroid;
         obj.GravityForce = GravityForce;
         obj.Torque = Torque;
@@ -100,8 +111,8 @@ public abstract class Body : IBody
         obj.Inertia = Inertia;
         obj.InverseInertia = InverseInertia;
         obj.Position = Position;
-        obj.Scale = Scale;
-        obj.Rotation = Rotation;
+        obj._scale = Scale;
+        obj._rotation = Rotation;
         obj.Color = Color;
         obj.Visual = Visual;
         obj.Visibility = Visibility;
@@ -109,7 +120,12 @@ public abstract class Body : IBody
         return obj;
     }
 
-    protected abstract Body CloneBody();
+    IDictionary<UId, Vector3> IBody.GetForces() => _forces;
+    void IBody.SetMaterial(IMaterial material) => Material = material;
+
+    protected abstract Body DeepClone();
 
     protected abstract void ComputeMass();
+
+    protected abstract void RecomputeBodyParameters(Vector3 newScale);
 }

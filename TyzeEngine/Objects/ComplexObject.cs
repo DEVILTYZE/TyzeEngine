@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using TyzeEngine.Interfaces;
-using TyzeEngine.Physics;
 
 namespace TyzeEngine.Objects;
 

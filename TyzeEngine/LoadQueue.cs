@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Resources;
@@ -16,37 +17,37 @@ public static class LoadQueue
     public static bool HasNewResources => _resourceQueue.Count > 0;
     public static bool HasNewModels => _modelQueue.Count > 0;
 
-    public static void Add(IResource resource) => _resourceQueue.Enqueue(resource);
+    public static void Add([NotNull] IResource resource) => _resourceQueue.Enqueue(resource);
     
-    public static void AddRange(IEnumerable<IResource> resources)
+    public static void AddRange([NotNull] IEnumerable<IResource> resources)
     {
         foreach(var resource in resources)
             _resourceQueue.Enqueue(resource);
     }
 
-    public static void Add(IGameObject obj) => _objectQueue.Enqueue(obj);
+    public static void Add([NotNull] IGameObject obj) => _objectQueue.Enqueue(obj);
 
-    public static void AddRange(IEnumerable<IGameObject> objects)
+    public static void AddRange([NotNull] IEnumerable<IGameObject> objects)
     {
         foreach (var obj in objects)
             _objectQueue.Enqueue(obj);
     }
 
-    public static void Add(IModel model)
+    public static void Add([NotNull] IModel model)
     {
         if (!model.Loaded)
             _modelQueue.Enqueue(model);
     }
     
-    public static void AddRange(IEnumerable<IModel> models)
+    public static void AddRange([NotNull] IEnumerable<IModel> models)
     {
         foreach (var model in models.Where(localModel => !localModel.Loaded))
             _modelQueue.Enqueue(model);
     }
 
-    public static IResource TakeLastResource() => _resourceQueue.Dequeue();
+    public static IResource TakeResource() => _resourceQueue.Dequeue();
 
-    public static IModel TakeLastModel() => _modelQueue.Dequeue();
+    public static IModel TakeModel() => _modelQueue.Dequeue();
     
     public static IEnumerable<IGameObject> TakeObjects()
     {

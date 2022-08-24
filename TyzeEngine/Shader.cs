@@ -7,16 +7,16 @@ using OpenTK.Mathematics;
 
 namespace TyzeEngine;
 
-public sealed class Shader : IDisposable
+internal sealed class Shader : IDisposable
 {
     private bool _disposed;
     private readonly Dictionary<string, int> _uniformLocations;
 
-    public string Error { get; private set; }
-    public int Handle { get; }
-    public bool IsEnabled { get; private set; }
+    internal string Error { get; private set; }
+    internal int Handle { get; }
+    internal bool IsEnabled { get; private set; }
 
-    public Shader(string vertexPath, string fragmentPath)
+    internal Shader(string vertexPath, string fragmentPath)
     {
         Error = string.Empty;
 
@@ -54,21 +54,21 @@ public sealed class Shader : IDisposable
 
     ~Shader() => ReleaseUnmanagedResources();
     
-    public void Enable()
+    internal void Enable()
     {
         IsEnabled = true;
         GL.UseProgram(Handle);
     }
 
-    public void Disable()
+    internal void Disable()
     {
         IsEnabled = false;
         GL.UseProgram(0);
     }
 
-    public int GetAttributeLocation(string parameterName) => GL.GetAttribLocation(Handle, parameterName);
+    internal int GetAttributeLocation(string parameterName) => GL.GetAttribLocation(Handle, parameterName);
 
-    public void SetMatrix4(string name, Matrix4 matrix)
+    internal void SetMatrix4(string name, Matrix4 matrix)
     {
         if (!IsEnabled)
             Enable();

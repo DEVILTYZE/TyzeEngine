@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Threading;
 using OpenTK.Audio.OpenAL;
 
 namespace TyzeEngine.Resources;
@@ -8,20 +7,18 @@ namespace TyzeEngine.Resources;
 public class Audio : Resource
 {
     private int _buffer;
-    private int _duration;
-    
+
     public bool IsEnabled { get; private set; }
     
     public Audio(string path) : base(path)
     {
         _buffer = -1;
-        _duration = 0;
         IsEnabled = false;
     }
 
     public override void Load()
     {
-        (var format, var frequency, _duration) = GetAudioInfo();
+        var (format, frequency) = GetAudioInfo();
         
         Handle = AL.GenSource();
 
@@ -42,12 +39,18 @@ public class Audio : Resource
 
     public override void Enable()
     {
+        if (IsEnabled)
+            Disable();
+
         IsEnabled = true;
-        ThreadPool.QueueUserWorkItem(_ => Play());
+        AL.SourcePlay(Handle);
     }
 
     public override void Disable()
     {
+        if (!IsEnabled)
+            return;
+        
         AL.SourceStop(Handle);
     }
 
@@ -64,7 +67,7 @@ public class Audio : Resource
         base.Dispose(disposing);
     }
 
-    private (ALFormat, int, int) GetAudioInfo()
+    private (ALFormat, int) GetAudioInfo()
     {
         ALFormat GetFormat(int countChannels, int bitDepth)
         {
@@ -92,15 +95,6 @@ public class Audio : Resource
         var format = GetFormat(countOfChannels, bitDepth);
         audioInfo.Close();
 
-        return (format, frequency, duration);
-    }
-
-    private void Play()
-    {
-        Disable();
-        AL.SourcePlay(Handle);
-        Thread.Sleep((int)(_duration * Constants.Duration));
-        Disable();
-        IsEnabled = false;
+        return (format, frequency);
     }
 }

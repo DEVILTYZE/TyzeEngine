@@ -3,12 +3,10 @@ using TyzeEngine.GameStructure;
 
 namespace TyzeEngine.Interfaces;
 
-public interface IScript
+public interface IScript : IIdObject
 {
-    IGameObject GameObject { get; }
     KeyboardState KeyboardState { get; }
-    IScene Scene { get; }
 
     void Execute(TriggeredEventArgs args = null);
-    internal void AddArgs(KeyboardState state, IScene scene);
+    internal void SetKeyboardState(KeyboardState state);
 }

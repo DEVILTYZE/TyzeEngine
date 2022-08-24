@@ -12,10 +12,11 @@ public class Model : IModel
     private uint[] _indices;
     private IVectorArray _texture;
 
-    public Uid Id { get; } = new();
+    public UId Id { get; set; } = new();
     public IReadOnlyList<Vector3> Vertices { get; private set; }
-    public string Directory { get; }
-    public string Name { get; }
+    public IEnumerable<Vector2> Vertices2D => Vertices.Select(vertex => vertex.Xy).ToArray();
+    public string Directory { get; private set; }
+    public string Name { get; private set; }
     public bool Loaded { get; private set; }
 
     public static IModel Point => new Model(DefaultModels.GetPoint()) { Loaded = true };
@@ -29,6 +30,7 @@ public class Model : IModel
         Vertices = coordinates.Item1;
         _texture = new VectorArray(DefaultModels.GetDefaultTexture(Vertices), ArrayType.TwoDimensions);
         _indices = coordinates.Item2;
+        Loaded = true;
     }
     
     public Model(string name, string directory = Constants.ModelsDirectory)
@@ -41,6 +43,9 @@ public class Model : IModel
 
     public void Load()
     {
+        if (Loaded)
+            return;
+        
         // void SetField(int index, MatchCollection matches)
         // {
         //     var value = matches[index].Value.Split(new[] { " ", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
@@ -96,7 +101,7 @@ public class Model : IModel
         {
             const int tStride = 2;
             var colorArray = new[] { color.X, color.Y, color.Z, color.W };
-            var result = new List<float>(Vertices.Count * (texture.Length + Constants.ColorLength));
+            var result = new List<float>(Vertices.Count * (texture.Length + Constants.Vector4Length));
 
             for (var i = 0; i < Vertices.Count; ++i)
             {
@@ -126,16 +131,13 @@ public class Model : IModel
         GC.SuppressFinalize(this);
     }
 
-    public Vector3[] GetScaledVectorArray(Vector3 scale)
+    public static IModel Find(string name)
     {
-        var vertices = Vertices.ToArray();
+        var isFound = Game.Models.TryGetValue(name, out var value);
 
-        for(var i = 0; i < vertices.Length; ++i)
-            Vector3.Multiply(vertices[i], scale, out vertices[i]);
-
-        return vertices;
+        return isFound ? value : null;
     }
-
+    
     private void Dispose(bool disposing)
     {
         if (_disposed)
@@ -146,6 +148,8 @@ public class Model : IModel
             Vertices = null;
             _indices = null;
             _texture = null;
+            Directory = null;
+            Name = null;
         }
 
         _disposed = true;

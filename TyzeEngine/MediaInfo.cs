@@ -21,7 +21,7 @@ using System.Runtime.InteropServices;
 
 namespace TyzeEngine;
 
-public enum StreamKind
+internal enum StreamKind
 {
     General,
     Video,
@@ -32,7 +32,7 @@ public enum StreamKind
     Menu,
 }
 
-public enum InfoKind
+internal enum InfoKind
 {
     Name,
     Text,
@@ -44,7 +44,7 @@ public enum InfoKind
     HowTo
 }
 
-public enum InfoOptions
+internal enum InfoOptions
 {
     ShowInInform,
     Support,
@@ -53,7 +53,7 @@ public enum InfoOptions
 }
 
 [Flags]
-public enum InfoFileOptions
+internal enum InfoFileOptions
 {
     FileOption_Nothing      = 0x00,
     FileOption_NoRecursive  = 0x01,
@@ -62,7 +62,7 @@ public enum InfoFileOptions
 };
 
 [Flags]
-public enum Status
+internal enum Status
 {
     None        =       0x00,
     Accepted    =       0x01,
@@ -71,7 +71,7 @@ public enum Status
     Finalized   =       0x08,
 }
 
-public class MediaInfo
+internal class MediaInfo
 {
     //Import of DLL functions. DO NOT USE until you know what you do (MediaInfo DLL do NOT use CoTaskMemAlloc to allocate memory)
     [DllImport("MediaInfo.dll")]
@@ -122,7 +122,7 @@ public class MediaInfo
     private static extern IntPtr MediaInfo_Count_Get(IntPtr Handle, IntPtr StreamKind, IntPtr StreamNumber);
 
     //MediaInfo class
-    public MediaInfo()
+    internal MediaInfo()
     {
         try
         {
@@ -142,7 +142,7 @@ public class MediaInfo
             return; MediaInfo_Delete(_handle);
     }
         
-    public int Open(string fileName)
+    internal int Open(string fileName)
     {
         if (_handle == (IntPtr)0)
             return 0;

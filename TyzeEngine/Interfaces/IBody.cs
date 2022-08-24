@@ -1,11 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using OpenTK.Mathematics;
 using TyzeEngine.Physics;
 
 namespace TyzeEngine.Interfaces;
 
-public interface IBody
+public interface IBody : IDeepCloneable<IBody>
 {
     Vector3 Position { get; set; }
     Vector3 Scale { get; set; }
@@ -16,7 +15,7 @@ public interface IBody
     BodyVisualType Visual { get; set; }
     
     // PHYSICS
-    int Layer { get; set; }
+    ushort CollisionLayer { get; set; }
     IMaterial Material { get; }
     float Mass { get; }
     float InverseMass { get; }
@@ -28,16 +27,14 @@ public interface IBody
     Vector3 AngularVelocity { get; set; }
     Vector3 Force { get; }
     Vector3 GravityForce { get; set; }
-    IReadOnlyDictionary<Type, Func<IBody, IBody, CollisionEventArgs>> CollisionMethods { get; }
     bool IsEnabled { get; set; }
 
     void SetColor(byte r, byte g, byte b, byte a);
     
     // PHYSICS
-    void AddMethod(Type physicsType, Func<IBody, IBody, CollisionEventArgs> method);
-    CollisionEventArgs IsCollisionTo(IBody bodyA, IBody bodyB);
-    void AddForce(Uid id, Vector3 force);
-    void RemoveForce(Uid id);
+    void AddForce(UId id, Vector3 force);
+    void RemoveForce(UId id);
     void SetMassAndInertia(float mass, float inertia);
-    IBody Clone();
+    internal IDictionary<UId, Vector3> GetForces();
+    internal void SetMaterial(IMaterial material);
 }

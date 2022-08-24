@@ -9,16 +9,10 @@ public sealed class Place : IPlace
 {
     private bool _disposed;
 
-    public Uid Id { get; } = new();
-    public IReadOnlyList<IPlace> NeighbourPlaces { get; set; }
-    public List<IGameObject> GameObjects { get; }
+    public UId Id { get; set; } = new();
+    public List<IPlace> NeighbourPlaces { get; set; } = new();
+    public List<IGameObject> GameObjects { get; set; } = new();
     public bool Loaded { get; set; }
-
-    public Place(IReadOnlyList<IPlace> neighbourPlaces, List<IGameObject> objects)
-    {
-        NeighbourPlaces = neighbourPlaces;
-        GameObjects = objects;
-    }
 
     ~Place() => ReleaseUnmanagedResources();
 
@@ -28,7 +22,14 @@ public sealed class Place : IPlace
         GC.SuppressFinalize(this);
     }
 
-    IEnumerable<Uid> IPlace.GetResourceIds() 
+    public static IPlace Find(string name)
+    {
+        var isFound = Game.Places.TryGetValue(name, out var value);
+
+        return isFound ? value : null;
+    }
+
+    IEnumerable<UId> IPlace.GetResourceIds() 
         => from texture in GameObjects.Select(obj => obj.Texture) 
             where texture is not null 
             select texture.Id;

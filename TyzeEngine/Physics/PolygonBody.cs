@@ -1,92 +1,37 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using OpenTK.Mathematics;
-using TyzeEngine.Interfaces;
 using TyzeEngine.Objects;
 
 namespace TyzeEngine.Physics;
 
 public class PolygonBody : Body
 {
-    public Vector3[] Vertices { get; private set; }
-    public Vector3[] Normals { get; private set; }
+    private readonly Vector2[] _vertices;
+
+    public Vector2[] Vertices
+    {
+        get => _vertices;
+        init
+        {
+            _vertices = value;
+            RecomputeBodyParameters(Scale);
+        }
+    }
+    public Vector2[] Normals { get; private set; }
+    public new Matrix2 RotationMatrix => new(base.RotationMatrix.Row0.Xy, base.RotationMatrix.Row1.Xy);
 
     public PolygonBody(IMaterial material) : base(material)
     {
-        AddMethod(typeof(PolygonBody), PhysicsGenerator.PolygonToPolygon);
-        AddMethod(typeof(EllipseBody), PhysicsGenerator.PolygonToCircle);
-    }
-    
-    public override CollisionEventArgs IsCollisionTo(IBody bodyA, IBody bodyB) 
-        => CollisionMethods[bodyB.GetType()].Invoke(bodyA, bodyB);
-
-    public void SetVertices(IEnumerable<Vector3> vertices)
-    {
-        Vertices = vertices.ToArray();
-        SetNormals();
-        ComputeMass();
     }
 
-    protected override Body CloneBody() => new PolygonBody(Material)
-    {
-        Vertices = Vertices,
-        Normals = Normals
-    };
-    
-
-    protected sealed override void ComputeMass()
-    {
-        Vector3 Cross(Vector3 vector1, Vector3 vector2) => new(
-            vector1.Y * vector2.Z - vector1.Z * vector2.Y,
-            vector1.Z * vector2.X - vector1.X * vector2.Z,
-            vector1.X * vector2.Y - vector1.Y * vector2.X
-        );
-
-        var centroid = Vector3.Zero;
-        var area = .0f;
-        var inertia = .0f;
-        const float kInv3 = 1 / 3f;
-
-        for (var i = 0; i < Vertices.Length; ++i)
-        {
-            var i2 = (i + 1) % Vertices.Length;
-            var vertex1 = Vertices[i];
-            var vertex2 = Vertices[i2];
-            
-            var d = MathF.Abs(Cross(vertex1, vertex2).Length);
-            var triangleArea = .5f * d;
-            area += triangleArea;
-            centroid += triangleArea * (vertex1 + vertex2);
-
-            var intX2 = vertex1.X * vertex1.X + vertex2.X * vertex1.X + vertex2.X * vertex2.X;
-            var intY2 = vertex1.Y * vertex1.Y + vertex2.Y * vertex1.Y + vertex2.Y * vertex2.Y;
-            inertia += .25f * kInv3 * d * (intX2 + intY2);
-        }
-
-        Centroid = centroid;
-        SetMassAndInertia(Material.Density * area, Material.Density * inertia);
-    }
-
-    private void SetNormals()
-    {
-        Normals = new Vector3[Vertices.Length];
-
-        for (var i = 0; i < Normals.Length; ++i)
-        {
-            var dVector = Vertices[i < Vertices.Length - 1 ? i + 1 : 0] - Vertices[i];
-            Normals[i] = new Vector3(dVector.Y, -dVector.X, 0).Normalized();
-        }
-    }
-
-    public Vector3 GetSupportPoint(Vector3 direction)
+    public Vector2 GetSupportPoint(Vector2 direction)
     {
         var bestProjection = float.MinValue;
         var bestVertex = Vertices[0];
 
         foreach (var vertex in Vertices)
         {
-            var projection = Vector3.Dot(vertex, direction);
+            var projection = Vector2.Dot(vertex, direction);
 
             if (projection <= bestProjection)
                 continue;
@@ -96,5 +41,63 @@ public class PolygonBody : Body
         }
 
         return bestVertex;
+    }
+
+    protected override Body DeepClone() => new PolygonBody(Material)
+    {
+        Vertices = Vertices,
+        Normals = Normals
+    };
+    
+    protected sealed override void ComputeMass()
+    {
+        var centroid = Vector3.Zero;
+        var area = .0f;
+        var inertia = .0f;
+        const float kInv3 = 1 / 3f;
+
+        for (var i = 0; i < Vertices.Length; ++i)
+        {
+            var i2 = (i + 1) % Vertices.Length;
+            var v1 = Vertices[i];
+            var v2 = Vertices[i2];
+            
+            var d = MathF.Abs(Vector2.PerpDot(v1, v2));
+            var triangleArea = .5f * d;
+            area += triangleArea;
+            centroid += new Vector3(triangleArea * (v1 + v2));
+
+            var intX2 = v1.X * v1.X + v2.X * v1.X + v2.X * v2.X;
+            var intY2 = v1.Y * v1.Y + v2.Y * v1.Y + v2.Y * v2.Y;
+            inertia += .25f * kInv3 * d * (intX2 + intY2);
+        }
+
+        Centroid = centroid;
+        SetMassAndInertia(Material.Density * area, Material.Density * inertia);
+    }
+
+    protected override void RecomputeBodyParameters(Vector3 newScale)
+    {
+        if (Vertices is null)
+            return;
+
+        var scale = new Vector2(newScale.X, newScale.Y);
+        
+        for(var i = 0; i < Vertices.Length; ++i)
+            Vector2.Multiply(Vertices[i], scale, out _vertices[i]);
+        
+        SetNormals();
+        ComputeMass();
+    }
+
+    private void SetNormals()
+    {
+        Normals = new Vector2[Vertices.Length];
+
+        for (var i = 0; i < Normals.Length; ++i)
+        {
+            var dVector = Vertices[i < Vertices.Length - 1 ? i + 1 : 0] - Vertices[i];
+            Normals[i] = new Vector2(dVector.Y, -dVector.X).Normalized();
+        }
     }
 }

@@ -1,10 +1,7 @@
-﻿using System;
+﻿namespace TyzeEngine.Interfaces;
 
-namespace TyzeEngine.Interfaces;
-
-public interface ITrigger
+public interface ITrigger : IIdObject
 {
-    Uid Id { get; }
     bool IsTriggered { get; set; }
     bool SaveStatus { get; }
 

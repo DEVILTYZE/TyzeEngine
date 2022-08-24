@@ -10,7 +10,14 @@ namespace TyzeEngine;
 public static class PhysicsGenerator
 {
     private static readonly object CollisionLocker = new();
-    
+
+    public static Dictionary<(Type, Type), Func<IBody, IBody, CollisionEventArgs>> CollisionMethods { get; } = new()
+    {
+        { (typeof(PolygonBody), typeof(PolygonBody)), PolygonToPolygon },
+        { (typeof(PolygonBody), typeof(EllipseBody)), PolygonToCircle },
+        { (typeof(EllipseBody), typeof(PolygonBody)), CircleToPolygon },
+        { (typeof(EllipseBody), typeof(EllipseBody)), CircleToCircle } 
+    };
     public static CollisionHandler CollisionEnter { get; set; } = ResolveCollision;
     public static CollisionHandler CollisionStay { get; set; }
     public static CollisionHandler CollisionExit { get; set; }
@@ -21,31 +28,40 @@ public static class PhysicsGenerator
         {
             for (var j = i + 1; j < objects.Count; ++j)
             {
-                if (objects[i].Body.Layer == objects[j].Body.Layer)
+                if (objects[i].Body.CollisionLayer == objects[j].Body.CollisionLayer)
                     continue;
-                
-                var args = objects[i].Body.IsCollisionTo(objects[i].Body, objects[j].Body);
+
+                var key = (objects[i].Body.GetType(), objects[j].Body.GetType());
+                var args = CollisionMethods[key].Invoke(objects[i].Body, objects[j].Body);
 
                 if (args.IsCollides)
                     CollisionEnter.Invoke(args);
             }
         });
     }
+    
+    public static Vector3 Cross(in Vector3 vector1, in Vector3 vector2) => new(
+        vector1.Y * vector2.Z - vector1.Z * vector2.Y,
+        vector1.Z * vector2.X - vector1.X * vector2.Z,
+        vector1.X * vector2.Y - vector1.Y * vector2.X
+    );
 
+    #region ResolveCollision
+    
     private static void ResolveCollision(CollisionEventArgs args)
     {
         PositionCorrection(args);
         var (bodyA, bodyB) = (args.BodyA, args.BodyB);
-        var velocityA = bodyA.Velocity + bodyA.Force;
-        var velocityB = bodyB.Velocity + bodyB.Force;
-        var difference = velocityB - velocityA;
-        var velocityAlongNormal = Vector3.Dot(difference, args.Normal);
+        var velA = bodyA.Velocity + bodyA.Force;
+        var velB = bodyB.Velocity + bodyB.Force;
+        var difference = velB - velA;
+        var velAlongNormal = Vector3.Dot(difference, args.Normal);
 
-        if (velocityAlongNormal > float.Epsilon)
+        if (velAlongNormal > float.Epsilon)
             return;
 
         var e = MathF.Min(bodyA.Material.Restitution, bodyB.Material.Restitution);
-        var jn = -(1 + e) * velocityAlongNormal / (bodyA.InverseMass + bodyB.InverseMass);
+        var jn = -(1 + e) * velAlongNormal / (bodyA.InverseMass + bodyB.InverseMass);
         var impulse = args.Normal * jn;
         
         lock (CollisionLocker)
@@ -70,9 +86,8 @@ public static class PhysicsGenerator
             frictionImpulse = jt * tangent;
         else
         {
-            var dynamicFriction = bodyA.Material.DynamicFriction; 
-            dynamicFriction = (dynamicFriction + bodyB.Material.DynamicFriction) / 2;
-            frictionImpulse = -jn * tangent * dynamicFriction;
+            var dynFriction = (bodyA.Material.DynamicFriction + bodyB.Material.DynamicFriction) / 2;
+            frictionImpulse = -jn * tangent * dynFriction;
         }
         
         lock (CollisionLocker)
@@ -89,8 +104,8 @@ public static class PhysicsGenerator
         const float percent = .2f;
         const float slop = .01f;
         var (bodyA, bodyB) = (args.BodyA, args.BodyB);
-        var correction = MathF.Max(args.Penetration - slop, .0f) / (bodyA.InverseMass 
-            + bodyB.InverseMass) * percent * args.Normal;
+        var max = MathF.Max(args.Penetration - slop, .0f);
+        var correction = max / (bodyA.InverseMass + bodyB.InverseMass) * percent * args.Normal;
         var correction1 = -bodyA.InverseMass * correction;
         var correction2 = bodyB.InverseMass * correction;
         
@@ -100,75 +115,72 @@ public static class PhysicsGenerator
             bodyB.Position += correction2;
         }
     }
+    
+    #endregion
 
     #region PolygonToPolygon
     
     internal static CollisionEventArgs PolygonToPolygon(IBody bodyA, IBody bodyB)
     {
         var args = new CollisionEventArgs(bodyA, bodyB);
-        var polygonBodyA = (PolygonBody)bodyA;
-        var polygonBodyB = (PolygonBody)bodyB;
+        var polyBodyA = (PolygonBody)bodyA;
+        var polyBodyB = (PolygonBody)bodyB;
 
-        var distanceA = FindAxisLeastPenetration(out var faceIndexA, polygonBodyA, polygonBodyB);
+        var distanceA = FindAxisLeastPenetration(out var faceIndexA, polyBodyA, polyBodyB);
 
-        if (distanceA >= float.Epsilon)
+        if (distanceA >= 0)
             return args;
         
-        var distanceB = FindAxisLeastPenetration(out var faceIndexB, polygonBodyB, polygonBodyA);
+        var distanceB = FindAxisLeastPenetration(out var faceIndexB, polyBodyB, polyBodyA);
         
-        if (distanceB >= float.Epsilon)
+        if (distanceB >= 0)
             return args;
 
-        args.IsCollides = true;
-        var referenceBody = polygonBodyA;
-        var incidentBody = polygonBodyB;
-        var referencedIndex = faceIndexA;
+        var refBody = polyBodyA;
+        var incBody = polyBodyB;
+        var refIndex = faceIndexA;
         var flip = false;
         
         if (!BiasGreaterThan(distanceA, distanceB))
         {
-            referenceBody = polygonBodyB;
-            incidentBody = polygonBodyA;
-            referencedIndex = faceIndexB;
+            refBody = polyBodyB;
+            incBody = polyBodyA;
+            refIndex = faceIndexB;
             flip = true;
         }
+        
+        FindIncidentFace(out var incVectors, refBody, incBody, refIndex);
 
-        var referencedMatrix = referenceBody.RotationMatrix;
-        var incidentMatrix = incidentBody.RotationMatrix;
-
-        FindIncidentFace(out var incidentVectors, referenceBody, incidentBody, referencedMatrix, incidentMatrix, 
-            referencedIndex);
-
-        var vectors = new Vector3[2];
-        vectors[0] = referenceBody.Vertices[referencedIndex];
-        referencedIndex = (referencedIndex + 1) % referenceBody.Vertices.Length;
-        vectors[1] = referenceBody.Vertices[referencedIndex];
-        vectors[0] = referencedMatrix * vectors[0] + referenceBody.Position;
-        vectors[1] = referencedMatrix * vectors[1] + referenceBody.Position;
+        var vectors = new Vector2[2];
+        vectors[0] = refBody.Vertices[refIndex];
+        refIndex = (refIndex + 1) % refBody.Vertices.Length;
+        vectors[1] = refBody.Vertices[refIndex];
+        vectors[0] = refBody.RotationMatrix * vectors[0] + refBody.Position.Xy;
+        vectors[1] = refBody.RotationMatrix * vectors[1] + refBody.Position.Xy;
         
         var sidePanelNormal = vectors[1] - vectors[0];
-        sidePanelNormal.Normalize();
-        var referencedFaceNormal = new Vector3(sidePanelNormal.Y, -sidePanelNormal.X, 0);
-        var referencedC = Vector3.Dot(referencedFaceNormal, vectors[1]);
-        var negativeSide = -Vector3.Dot(sidePanelNormal, vectors[1]);
-        var positiveSide = Vector3.Dot(sidePanelNormal, vectors[1]);
+        sidePanelNormal.NormalizeFast();
+        var refFaceNormal = new Vector2(sidePanelNormal.Y, -sidePanelNormal.X);
+        var refC = Vector2.Dot(refFaceNormal, vectors[1]);
+        var negativeSide = -Vector2.Dot(sidePanelNormal, vectors[1]);
+        var positiveSide = Vector2.Dot(sidePanelNormal, vectors[1]);
 
-        if (Clip(-sidePanelNormal, negativeSide, ref incidentVectors) < 2)
+        if (Clip(-sidePanelNormal, negativeSide, ref incVectors) < 2)
             return args;
         
-        if (Clip(sidePanelNormal, positiveSide, ref incidentVectors) < 2)
+        if (Clip(sidePanelNormal, positiveSide, ref incVectors) < 2)
             return args;
 
         args.IsCollides = true;
-        args.Normal = flip ? -referencedFaceNormal : referencedFaceNormal;
-        var separation = Vector3.Dot(referencedFaceNormal, incidentVectors[0]) - referencedC;
+        args.Normal = flip ? -new Vector3(refFaceNormal) : new Vector3(refFaceNormal);
+        var separation = Vector2.Dot(refFaceNormal, incVectors[0]) - refC;
 
         if (separation <= float.Epsilon)
             args.Penetration = -separation;
         else
             args.Penetration = 0;
         
-        separation = Vector3.Dot(referencedFaceNormal, incidentVectors[1]) - referencedC;
+        separation = Vector2.Dot(refFaceNormal, incVectors[1]) - refC;
 
         if (separation <= float.Epsilon)
             args.Penetration += -separation;
@@ -176,12 +188,12 @@ public static class PhysicsGenerator
         return args;
     }
 
-    private static int Clip(Vector3 normal, float c, ref Vector3[] face)
+    private static int Clip(Vector2 normal, float c, ref Vector2[] face)
     {
         var sp = 0;
         var outVectors = new[] { face[0], face[1] };
-        var d1 = Vector3.Dot(normal, face[0]) - c;
-        var d2 = Vector3.Dot(normal, face[1]) - c;
+        var d1 = Vector2.Dot(normal, face[0]) - c;
+        var d2 = Vector2.Dot(normal, face[1]) - c;
 
         if (d1 <= float.Epsilon)
         {
@@ -197,6 +209,9 @@ public static class PhysicsGenerator
 
         if (d1 * d2 < float.Epsilon)
         {
+            if (sp == 2)
+                return 0;
+            
             var alpha = d1 / (d1 - d2);
             outVectors[sp] = face[0] + alpha * (face[1] - face[0]);
             ++sp;
@@ -208,31 +223,30 @@ public static class PhysicsGenerator
         return sp;
     }
 
-    private static void FindIncidentFace(out Vector3[] vectors, PolygonBody referenceBody, PolygonBody incidentBody, 
-        Matrix3 referencedMatrix, Matrix3 incidentMatrix, int referencedIndex)
+    private static void FindIncidentFace(out Vector2[] vectors, PolygonBody refBody, PolygonBody incBody, int refIndex)
     {
-        var referencedNormal = referenceBody.Normals[referencedIndex];
-        referencedNormal = referencedMatrix * referencedNormal;
-        Matrix3.Transpose(incidentMatrix, out var transposed);
-        referencedNormal = transposed * referencedNormal;
-        var incidentFace = 0;
+        var refNormal = refBody.Normals[refIndex];
+        refNormal = refBody.RotationMatrix * refNormal;
+        Matrix2.Transpose(refBody.RotationMatrix, out var transposed);
+        refNormal = transposed * refNormal;
+        var incFace = 0;
         var minDot = float.MaxValue;
 
-        for (var i = 0; i < incidentBody.Vertices.Length; ++i)
+        for (var i = 0; i < incBody.Vertices.Length; ++i)
         {
-            var dot = Vector3.Dot(referencedNormal, incidentBody.Vertices[i]);
+            var dot = Vector2.Dot(refNormal, incBody.Vertices[i]);
 
             if (dot >= minDot)
                 continue;
 
             minDot = dot;
-            incidentFace = i;
+            incFace = i;
         }
 
-        vectors = new Vector3[2];
-        vectors[0] = incidentMatrix * incidentBody.Vertices[incidentFace] + incidentBody.Position;
-        incidentFace = (incidentFace + 1) % incidentBody.Vertices.Length;
-        vectors[1] = incidentMatrix * incidentBody.Vertices[incidentFace] + incidentBody.Position;
+        vectors = new Vector2[2];
+        vectors[0] = incBody.RotationMatrix * incBody.Vertices[incFace] + incBody.Position.Xy;
+        incFace = (incFace + 1) % incBody.Vertices.Length;
+        vectors[1] = incBody.RotationMatrix * incBody.Vertices[incFace] + incBody.Position.Xy;
     }
 
     private static float FindAxisLeastPenetration(out int faceIndex, PolygonBody bodyA, PolygonBody bodyB)
@@ -242,10 +256,12 @@ public static class PhysicsGenerator
 
         for (var i = 0; i < bodyA.Vertices.Length; ++i)
         {
-            var normalA = bodyA.Normals[i];
-            var support = bodyB.GetSupportPoint(-normalA);
-            var vertexA = bodyA.Vertices[i];
-            var distance = Vector3.Dot(normalA, support - vertexA);
+            var normal = bodyA.Normals[i];
+            Matrix2.Transpose(bodyB.RotationMatrix, out var buT);
+            normal = buT * (bodyA.RotationMatrix * normal);
+            var support = bodyB.GetSupportPoint(-normal);
+            var vertex = buT * (bodyA.RotationMatrix * bodyA.Vertices[i] + bodyA.Position.Xy - bodyB.Position.Xy);
+            var distance = Vector2.Dot(normal, support - vertex);
             
             if (distance <= bestDistance)
                 continue;
@@ -268,14 +284,14 @@ public static class PhysicsGenerator
     internal static CollisionEventArgs CircleToCircle(IBody bodyA, IBody bodyB)
     {
         var args = new CollisionEventArgs(bodyA, bodyB);
-        var circleBodyA = (EllipseBody)bodyA;
-        var circleBodyB = (EllipseBody)bodyB;
-        var normal = circleBodyA.Position - circleBodyA.Position;
-        var radius = circleBodyA.Radius + circleBodyB.Radius;
-        radius *= radius;
-        var distance = normal.LengthSquared;
+        var cirBodyA = (EllipseBody)bodyA;
+        var cirBodyB = (EllipseBody)bodyB;
+        var n = cirBodyA.Position - cirBodyA.Position;
+        var r = cirBodyA.Radius + cirBodyB.Radius;
+        r *= r;
+        var distance = n.LengthSquared;
 
-        if (distance > radius)
+        if (distance > r)
             return args;
 
         args.IsCollides = true;
@@ -283,13 +299,13 @@ public static class PhysicsGenerator
 
         if (distance != 0)
         {
-            args.Penetration = radius - distance;
-            args.Normal = normal;
+            args.Penetration = r - distance;
+            args.Normal = n;
         }
         else
         {
-            args.Penetration = circleBodyA.Radius;
-            args.Normal = -normal;
+            args.Penetration = cirBodyA.Radius;
+            args.Normal = -n;
         }
 
         return args;

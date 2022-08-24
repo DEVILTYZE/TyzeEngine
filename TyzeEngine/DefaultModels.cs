@@ -5,18 +5,18 @@ using OpenTK.Mathematics;
 
 namespace TyzeEngine;
 
-public static class DefaultModels
+internal static class DefaultModels
 {
-    public static (Vector3[], uint[]) GetPoint() => (GetPointVertices(), GetPointIndices());
+    internal static (Vector3[], uint[]) GetPoint() => (GetPointVertices(), GetPointIndices());
 
-    public static (Vector3[], uint[]) GetTriangle() => (GetTriangleVertices(), GetTriangleIndices());
+    internal static (Vector3[], uint[]) GetTriangle() => (GetTriangleVertices(), GetTriangleIndices());
     
-    public static (Vector3[], uint[]) GetRectangle() => (GetRectangleVertices(), GetRectangleIndices());
+    internal static (Vector3[], uint[]) GetRectangle() => (GetRectangleVertices(), GetRectangleIndices());
 
-    public static (Vector3[], uint[]) GetCircle(float angle = (float)Math.PI / 10)
+    internal static (Vector3[], uint[]) GetCircle(float angle = (float)Math.PI / 10)
     {
         var vertices = GetCircleVertices(angle);
-        var indices = GetCircleIndices(vertices.Length / Constants.VertexLength - 1);
+        var indices = GetCircleIndices(vertices.Length / Constants.Vector3Length - 1);
 
         return (vertices, indices);
     }

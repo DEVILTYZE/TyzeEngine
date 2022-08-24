@@ -12,11 +12,8 @@ using TyzeEngine.Interfaces;
 
 namespace TyzeEngine;
 
-public sealed class TyzeWindow : GameWindow
+internal sealed class TyzeWindow : GameWindow
 {
-    private readonly IReadOnlyList<IScene> _scenes;
-    private int _currentSceneIndex;
-    private readonly IReadOnlyList<IScript> _scripts;
     private Shader _shader;
     private Matrix4 _view, _projection;
     
@@ -30,35 +27,26 @@ public sealed class TyzeWindow : GameWindow
     private readonly string _title;
 
     // PROPERTIES
-    private IScene CurrentScene => _scenes[_currentSceneIndex];
+    private IScene CurrentScene => Scenes?[CurrentSceneIndex];
     private IPlace CurrentPlace => CurrentScene.CurrentPlace;
 
-    public TriggerHandler TriggerLoadObjects { get; }
-    public TriggerHandler TriggerNextScene { get; }
+    internal int CurrentSceneIndex { get; set; }
+    internal IReadOnlyList<IScene> Scenes { get; set; }
+    internal IReadOnlyList<IScript> Scripts { get; set; }
 
-    public TyzeWindow(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings, 
-        IReadOnlyList<IScene> scenes, IReadOnlyList<IScript> scripts = null) 
+    internal TriggerHandler TriggerLoadObjects { get; }
+    internal TriggerHandler TriggerNextScene { get; }
+    internal bool IsDebugMode { get; set; }
+
+    internal TyzeWindow(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings) 
         : base(gameWindowSettings, nativeWindowSettings)
     {
-        if (scenes is null || scenes.Count == 0)
-            throw new ArgumentException("Count of scenes is zero.", nameof(scenes));
-        
         TriggerLoadObjects += LoadObjects;
         TriggerNextScene += LoadScene;
-        VSync = VSyncMode.On;
-        _scenes = scenes;
-        _currentSceneIndex = 0;
-        CurrentScene.ReloadObjects = TriggerLoadObjects;
-        CurrentScene.LoadSceneHandler = TriggerNextScene;
-        _scripts = scripts ?? new List<IScript>();
+        VSync = VSyncMode.Off;
 
-        foreach (var script in _scripts)
-            script.AddArgs(KeyboardState, CurrentScene);
-        
         // SHOW FPS настройки.
         _title = nativeWindowSettings.Title;
-        _time = 0;
-        _frames = 0;
     }
 
     protected override void OnLoad()
@@ -68,7 +56,13 @@ public sealed class TyzeWindow : GameWindow
         GL.Enable(EnableCap.DepthTest);
         GL.Enable(EnableCap.CullFace);
         GL.CullFace(CullFaceMode.Back);
-
+        
+        CurrentScene.ReloadObjects = TriggerLoadObjects;
+        CurrentScene.LoadSceneHandler = TriggerNextScene;
+        
+        foreach (var script in Scripts)
+            script.SetKeyboardState(KeyboardState);
+        
         InitializeAudio();
         _shader = new Shader(Constants.ShaderVertTexturePath, Constants.ShaderFragTexturePath);
         _shader.Enable();
@@ -101,7 +95,7 @@ public sealed class TyzeWindow : GameWindow
         if (KeyboardState.IsKeyDown(Keys.Escape))
             Close();
 
-        foreach (var script in _scripts)
+        foreach (var script in Scripts)
             script.Execute(new TriggeredEventArgs(args.Time));
 
         // something...
@@ -128,15 +122,18 @@ public sealed class TyzeWindow : GameWindow
     private void LoadObjects(TriggeredEventArgs args)
     {
         var objects = args is not null && (bool)args.Data ? GetNewObjects() : GetCurrentObjects();
-        const int stride = Constants.VertexStride + Constants.TextureStride + Constants.ColorStride;
+        const int stride = Constants.Vector3Stride + Constants.Vector2Stride + Constants.Vector4Stride;
         
         // Загрузка объекта.
         foreach (var obj in objects)
         {
             // Создание нового Array object для каждого игрового объекта.
             obj.ArrayObject = new ArrayObject();
-            
-            if (obj.Body.Visibility is VisibilityType.Collapsed or VisibilityType.Hidden)
+
+            if (IsDebugMode)
+                ArrayObject.Primitive = PrimitiveType.LineLoop;
+
+            if (obj.Body?.Visibility is VisibilityType.Collapsed or VisibilityType.Hidden)
                 continue;
             
             obj.ArrayObject.Enable();
@@ -154,13 +151,14 @@ public sealed class TyzeWindow : GameWindow
             var texture = _shader.GetAttributeLocation("inTexture");
             var color = _shader.GetAttributeLocation("inColor");
             
+            // Настройка атрибутов.
             buffer.Enable();
-            obj.ArrayObject.EnableAttribute(position, Constants.VertexLength, VertexAttribPointerType.Float, 
+            obj.ArrayObject.EnableAttribute(position, Constants.Vector3Length, VertexAttribPointerType.Float, 
                 stride, 0);
-            obj.ArrayObject.EnableAttribute(texture, Constants.TextureLength, VertexAttribPointerType.Float, 
-                stride, Constants.VertexStride);
-            obj.ArrayObject.EnableAttribute(color, Constants.ColorLength, VertexAttribPointerType.Float, 
-                stride, Constants.VertexStride + Constants.TextureStride);
+            obj.ArrayObject.EnableAttribute(texture, Constants.Vector2Length, VertexAttribPointerType.Float, 
+                stride, Constants.Vector3Stride);
+            obj.ArrayObject.EnableAttribute(color, Constants.Vector4Length, VertexAttribPointerType.Float, 
+                stride, Constants.Vector3Stride + Constants.Vector2Stride);
             buffer.Disable();
 
             // Создание буфера для Element object.
@@ -214,7 +212,7 @@ public sealed class TyzeWindow : GameWindow
         PhysicsGenerator.DetermineCollision(objects);
     }
 
-    private void LoadScene(TriggeredEventArgs args) => _currentSceneIndex = (int)args.Data;
+    private void LoadScene(TriggeredEventArgs args) => CurrentSceneIndex = (int)args.Data;
 
     private IEnumerable<IGameObject> GetCurrentObjects()
         => new[] { CurrentPlace }.Concat(CurrentPlace.NeighbourPlaces).SelectMany(place => place.GameObjects);
@@ -237,7 +235,7 @@ public sealed class TyzeWindow : GameWindow
             return;
         
         Title = _title + " / FPS: " + _frames;
-        _time = 0.0;
+        _time = 0;
         _frames = 0;
     }
 

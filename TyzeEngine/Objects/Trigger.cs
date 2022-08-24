@@ -3,13 +3,12 @@ using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Objects;
 
-public class Trigger : ITrigger
+public sealed class Trigger : ITrigger
 {
-    private readonly int _placeId;
+    private readonly int _placeId = -1;
+    private event TriggerHandler Triggered;
 
-    protected event TriggerHandler Triggered;
-
-    public Uid Id { get; } = new();
+    public UId Id { get; set; } = new();
     public bool IsTriggered { get; set; }
     public bool SaveStatus { get; }
 
@@ -21,15 +20,18 @@ public class Trigger : ITrigger
         Triggered += scene.LoadPlace;
     }
 
-    public Trigger(IScript script, bool notSave = false) : this(notSave)
+    public Trigger(IScript script, bool notSave = false) : this(notSave) => Triggered += script.Execute;
+    
+    public void OnTriggered()
     {
-        _placeId = -1;
-        Triggered += script.Execute;
+        Triggered?.Invoke(new TriggeredEventArgs(_placeId));
+        IsTriggered = true;
     }
 
-    public virtual void OnTriggered()
+    public static ITrigger Find(string name)
     {
-        Triggered?.Invoke(new TriggeredEventArgs(_placeId == -1 ? null : _placeId));
-        IsTriggered = true;
+        var isFound = Game.Triggers.TryGetValue(name, out var value);
+
+        return isFound ? value : null;
     }
 }

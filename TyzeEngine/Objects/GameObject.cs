@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using OpenTK.Graphics.OpenGL4;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Resources;
@@ -38,7 +37,7 @@ public abstract class GameObject : IGameObject
         }
     }
 
-    public Uid Id { get; } = new();
+    public UId Id { get; set; } = new();
     public IModel Model { get; private set; }
     public IBody Body { get; set; }
     public IResource Texture { get; set; }
@@ -48,26 +47,10 @@ public abstract class GameObject : IGameObject
 
     protected GameObject(IModel model) => Model = model;
 
-    protected GameObject(SaveGameObjectData saveData) : this(saveData.Model)
-    {
-        Id = saveData.Id;
-        
-        if (string.CompareOrdinal(saveData.BodyName, "null") != 0)
-        {
-            Body.Position = saveData.Position;
-            Body.Scale = saveData.Size;
-            Body.Rotation = saveData.Rotation;
-            Body.Color = saveData.Color;
-        }
-        
-        foreach (var trigger in Triggers.Where(trigger => saveData.TriggerDictionary.ContainsKey(trigger.Id)))
-            trigger.IsTriggered = saveData.TriggerDictionary[trigger.Id];
-    }
-    
     ~GameObject() => Dispose(false);
 
     public override string ToString()
-        => $"object: {Id.Value}\r\n" +
+        => $"object: {Id}\r\n" +
            string.Join(' ', Body.Position) + "\r\n" +
            string.Join(' ', Body.Scale) + "\r\n" +
            string.Join(' ', Body.Rotation) + "\r\n" +
@@ -76,7 +59,7 @@ public abstract class GameObject : IGameObject
     
     public IGameObject Clone()
     {
-        var obj = CloneObject();
+        var obj = DeepClone();
         obj.Body = Body?.Clone();
         obj.Model = Model;
         obj.Scripts = Scripts;
@@ -87,7 +70,7 @@ public abstract class GameObject : IGameObject
         return obj;
     }
 
-    protected abstract GameObject CloneObject();
+    void IGameObject.SetModel(IModel model) => Model = model;
 
     public void Dispose()
     {
@@ -95,13 +78,26 @@ public abstract class GameObject : IGameObject
         GC.SuppressFinalize(this);
     }
 
+    public static IGameObject Find(string name)
+    {
+        var isFound = Game.GameObjects.TryGetValue(name, out var value);
+
+        return isFound ? value : null;
+    }
+
+    protected abstract GameObject DeepClone();
+
     private void Dispose(bool disposing)
     {
         if (_disposed)
             return;
 
         if (disposing)
+        {
             Body = null;
+            Triggers = null;
+            Scripts = null;
+        }
 
         ReleaseUnmanagedResources();
         

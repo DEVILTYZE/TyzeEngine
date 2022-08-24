@@ -4,15 +4,15 @@ using OpenTK.Graphics.OpenGL4;
 
 namespace TyzeEngine;
 
-public sealed class BufferObject : IDisposable
+internal sealed class BufferObject : IDisposable
 {
     private readonly BufferTarget _type;
     private bool _disposed;
     
-    public int Handle { get; }
-    public bool IsEnabled { get; private set; }
+    internal int Handle { get; }
+    internal bool IsEnabled { get; private set; }
 
-    public BufferObject(BufferTarget type)
+    internal BufferObject(BufferTarget type)
     {
         _type = type;
         Handle = GL.GenBuffer();
@@ -21,7 +21,7 @@ public sealed class BufferObject : IDisposable
 
     ~BufferObject() => ReleaseUnmanagedResources();
 
-    public void SetData<T>(T[] data, BufferUsageHint hint) where T : struct
+    internal void SetData<T>(T[] data, BufferUsageHint hint) where T : struct
     {
         if (data is null || data.Length == 0)
             throw new ArgumentException("Data is null or empty.", nameof(data));
@@ -31,13 +31,13 @@ public sealed class BufferObject : IDisposable
         Disable();
     }
 
-    public void Enable()
+    internal void Enable()
     {
         GL.BindBuffer(_type, Handle);
         IsEnabled = true;
     }
 
-    public void Disable()
+    internal void Disable()
     {
         GL.BindBuffer(_type, 0);
         IsEnabled = false;
