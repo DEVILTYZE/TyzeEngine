@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Physics;
@@ -8,7 +9,8 @@ namespace TyzeEngine.Objects;
 public abstract class Body : IBody
 {
     private readonly Dictionary<UId, Vector3> _forces = new();
-    private Vector3 _rotation, _scale;
+    private Quaternion _rotation;
+    private Vector3 _scale;
 
     public Vector3 Position { get; set; } = Constants.DefaultPosition;
     public Vector3 Scale
@@ -26,7 +28,7 @@ public abstract class Body : IBody
             RecomputeBodyParameters(divide);
         }
     }
-    public Vector3 Rotation
+    public Quaternion Rotation
     {
         get => _rotation;
         set
@@ -51,7 +53,7 @@ public abstract class Body : IBody
     public Vector3 Centroid { get; set; } = Vector3.Zero;
     public Vector3 Torque { get; set; } = Vector3.Zero;
     public Vector3 Velocity { get; set; } = Vector3.Zero;
-    public Vector3 AngularVelocity { get; set; } = Vector3.Zero;
+    public Vector3 AngularVelocity { get; set; }
     public Vector3 Force
     {
         get

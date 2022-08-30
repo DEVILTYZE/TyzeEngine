@@ -4,12 +4,13 @@ using TyzeEngine.Interfaces;
 
 namespace TyzeEngine;
 
-public delegate void TriggerHandler(TriggeredEventArgs args);
+public delegate void TriggerHandler();
 public delegate void CollisionHandler(CollisionEventArgs args);
 
 public class TriggeredEventArgs : EventArgs
 {
     public object Data { get; }
+    public static readonly TriggeredEventArgs NullArgs = new(null);
 
     public TriggeredEventArgs(object data) => Data = data;
 }

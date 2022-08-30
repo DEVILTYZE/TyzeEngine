@@ -17,7 +17,9 @@ public abstract class Resource : IResource
     ~Resource() => Dispose(false);
 
     public abstract void Load();
+    
     public abstract void Enable();
+    
     public abstract void Disable();
 
     public void Dispose()
@@ -40,9 +42,9 @@ public abstract class Resource : IResource
         Disposed = true;
     }
     
-    public static IResource Find(string name)
+    public static IResource FindOrDefault(string name)
     {
-        var isFound = Game.Resources.TryGetValue(name, out var value);
+        var isFound = Game.Instance.Resources.TryGetValue(name, out var value);
 
         return isFound ? value : null;
     }

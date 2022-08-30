@@ -39,6 +39,9 @@ public class Audio : Resource
 
     public override void Enable()
     {
+        if (Handle == Constants.ErrorCode)
+            Load();
+        
         if (IsEnabled)
             Disable();
 
@@ -91,7 +94,7 @@ public class Audio : Resource
         var frequency = int.Parse(audioInfo.Get(StreamKind.Audio, 0, "SamplingRate"));
         var countOfChannels = int.Parse(audioInfo.Get(StreamKind.Audio, 0, "Channel(s)"));
         var bitDepth = int.Parse(audioInfo.Get(StreamKind.Audio, 0, "BitDepth"));
-        var duration = int.Parse(audioInfo.Get(StreamKind.Audio, 0, "Duration"));
+        // var duration = int.Parse(audioInfo.Get(StreamKind.Audio, 0, "Duration"));
         var format = GetFormat(countOfChannels, bitDepth);
         audioInfo.Close();
 

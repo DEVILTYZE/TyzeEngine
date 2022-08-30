@@ -22,9 +22,9 @@ public sealed class Place : IPlace
         GC.SuppressFinalize(this);
     }
 
-    public static IPlace Find(string name)
+    public static IPlace FindOrDefault(string name)
     {
-        var isFound = Game.Places.TryGetValue(name, out var value);
+        var isFound = Game.Instance.Places.TryGetValue(name, out var value);
 
         return isFound ? value : null;
     }

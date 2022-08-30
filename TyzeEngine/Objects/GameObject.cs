@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using OpenTK.Graphics.OpenGL4;
+using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Resources;
 
@@ -16,24 +17,12 @@ public abstract class GameObject : IGameObject
         get
         {
             if (!SaveStatus)
+                return BufferUsageHint.StreamDraw;
+
+            if (Body?.GravityForce != Vector3.Zero)
                 return BufferUsageHint.StaticDraw;
 
-            if (Body is null) 
-                return BufferUsageHint.StaticDraw;
-            
-            if (Body.Visibility is VisibilityType.Collapsed or VisibilityType.Hidden)
-                return BufferUsageHint.StaticDraw;
-
-            if (Body.Force.Length > 0)
-                return BufferUsageHint.DynamicDraw;
-                
-            return Scripts.Count switch
-            {
-                > 0 when Triggers.Count > 0 => BufferUsageHint.StreamDraw,
-                > 0 when Triggers.Count == 0 => BufferUsageHint.DynamicDraw,
-                0 when Triggers.Count > 0 => BufferUsageHint.DynamicDraw,
-                _ => BufferUsageHint.StaticDraw
-            };
+            return Body?.Force.Length > 0 ? BufferUsageHint.DynamicDraw : BufferUsageHint.StaticDraw;
         }
     }
 
@@ -41,8 +30,6 @@ public abstract class GameObject : IGameObject
     public IModel Model { get; private set; }
     public IBody Body { get; set; }
     public IResource Texture { get; set; }
-    public List<ITrigger> Triggers { get; private set; } = new();
-    public List<IScript> Scripts { get; private set; } = new();
     public bool SaveStatus { get; set; }
 
     protected GameObject(IModel model) => Model = model;
@@ -62,8 +49,6 @@ public abstract class GameObject : IGameObject
         var obj = DeepClone();
         obj.Body = Body?.Clone();
         obj.Model = Model;
-        obj.Scripts = Scripts;
-        obj.Triggers = Triggers;
         obj.Texture = Texture;
         obj.SaveStatus = SaveStatus;
 
@@ -78,11 +63,18 @@ public abstract class GameObject : IGameObject
         GC.SuppressFinalize(this);
     }
 
-    public static IGameObject Find(string name)
+    public static IGameObject FindOrDefault(string name)
     {
-        var isFound = Game.GameObjects.TryGetValue(name, out var value);
+        var isFound = Game.Instance.GameObjects.TryGetValue(name, out var value);
 
         return isFound ? value : null;
+    }
+
+    public static IEnumerable<IGameObject> FindOrDefault(Predicate<IGameObject> predicate)
+    {
+        foreach (var (_, obj) in Game.Instance.GameObjects)
+            if (predicate.Invoke(obj))
+                yield return obj;
     }
 
     protected abstract GameObject DeepClone();
@@ -95,13 +87,10 @@ public abstract class GameObject : IGameObject
         if (disposing)
         {
             Body = null;
-            Triggers = null;
-            Scripts = null;
+            Texture = null;
         }
 
         ReleaseUnmanagedResources();
-        
-        Texture = null;
         _disposed = true;
     }
 

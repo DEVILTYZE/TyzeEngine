@@ -94,8 +94,8 @@ public static class PhysicsGenerator
         {
             bodyA.Velocity += -bodyA.InverseMass * frictionImpulse;
             bodyB.Velocity += bodyB.InverseMass * frictionImpulse;
-            bodyA.Torque += -bodyA.InverseInertia * frictionImpulse;
-            bodyB.Torque += bodyB.InverseInertia * frictionImpulse;
+            // bodyA.Torque += -bodyA.InverseInertia * frictionImpulse;
+            // bodyB.Torque += bodyB.InverseInertia * frictionImpulse;
         }
     }
 

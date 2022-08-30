@@ -58,6 +58,9 @@ public sealed class Texture : Resource
 
     public override void Enable()
     {
+        if (Handle == Constants.ErrorCode)
+            Load();
+        
         GL.ActiveTexture(Unit);
         GL.BindTexture(TextureTarget.Texture2D, Handle);
         IsEnabled = true;

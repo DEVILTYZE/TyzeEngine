@@ -19,36 +19,29 @@ public sealed class Game : IDisposable
     public static Game Instance => InstanceHolder.Value;
 
     #region PropertiesAndFields
+
+    private Dictionary<UId, GameAssetType> _uIds = new();
+    private Dictionary<string, GameAssetType> _names = new();
+    private SortedList<string, IScene> _scenes = new();
+    private SortedList<string, IPlace> _places = new();
+    private SortedList<string, IGameObject> _objects = new();
+    private SortedList<string, IScript> _scripts = new();
+    private SortedList<string, ITrigger> _triggers = new();
+    private SortedList<string, IResource> _resources = new();
+    private SortedList<string, IModel> _models = new();
+    private TyzeWindow _window;
+    private bool _isRunning, _disposed;
+    private List<IScript> _frameScripts = new();
+    private readonly IReadOnlyDictionary<GameAssetType, IDictionary> _lists;
+
+    internal IReadOnlyDictionary<string, IScene> Scenes => _scenes;
+    internal IReadOnlyDictionary<string, IPlace> Places => _places;
+    internal IReadOnlyDictionary<string, IGameObject> GameObjects => _objects;
+    internal IReadOnlyDictionary<string, IScript> Scripts => _scripts;
+    internal IReadOnlyDictionary<string, ITrigger> Triggers => _triggers;
+    internal IReadOnlyDictionary<string, IResource> Resources => _resources;
+    internal IReadOnlyDictionary<string, IModel> Models => _models;
     
-    private static readonly Action<IDictionary, string, object> AddMethod = (dictionary, name, obj) =>
-    {
-        if (dictionary.Contains(name))
-            dictionary[name] = obj;
-        else
-            dictionary.Add(name, obj);
-    };
-
-    private static HashSet<UId> _uIds = new();
-    private static HashSet<string> _names = new();
-    private static SortedList<string, IScene> _scenes = new();
-    private static SortedList<string, IPlace> _places = new();
-    private static SortedList<string, IGameObject> _objects = new();
-    private static SortedList<string, IScript> _scripts = new();
-    private static SortedList<string, IScript> _frameScripts = new();
-    private static SortedList<string, ITrigger> _triggers = new();
-    private static SortedList<string, IResource> _resources = new();
-    private static SortedList<string, IModel> _models = new();
-    private static TyzeWindow _window;
-    private static bool _isRunning, _disposed;
-
-    internal static IReadOnlyDictionary<string, IScene> Scenes => _scenes;
-    internal static IReadOnlyDictionary<string, IPlace> Places => _places;
-    internal static IReadOnlyDictionary<string, IGameObject> GameObjects => _objects;
-    internal static IReadOnlyDictionary<string, IScript> Scripts => _scripts.Concat(_frameScripts).ToDictionary(
-        item => item.Key, item => item.Value);
-    internal static IReadOnlyDictionary<string, ITrigger> Triggers => _triggers;
-    internal static IReadOnlyDictionary<string, IResource> Resources => _resources;
-    internal static IReadOnlyDictionary<string, IModel> Models => _models;
     public RunMode RunMode { get; set; } = RunMode.Debug;
     public Saver Saver { get; set; } = new();
     
@@ -59,9 +52,18 @@ public sealed class Game : IDisposable
 
     private Game()
     {
+        _lists = new SortedList<GameAssetType, IDictionary>
+        {
+            { GameAssetType.Scene, _scenes },
+            { GameAssetType.Place, _places },
+            { GameAssetType.GameObject, _objects },
+            { GameAssetType.Script, _scripts },
+            { GameAssetType.Trigger, _triggers },
+            { GameAssetType.Resource, _resources },
+            { GameAssetType.Model, _models }
+        };
         var place = new Place();
-        var scene = new Scene(place);
-        Add(StandardSceneName, scene);
+        Add(StandardSceneName, new Scene(place));
         Add(StandardPlaceName, place, StandardSceneName);
     }
 
@@ -76,7 +78,7 @@ public sealed class Game : IDisposable
         {
             _window.IsDebugMode = RunMode == RunMode.Debug;
             _window.Scenes = _scenes.Select(pair => pair.Value).ToList();
-            _window.Scripts = _frameScripts.Select(pair => pair.Value).ToList();
+            _window.Scripts = _frameScripts;
             _isRunning = true;
             _window.Run();
         }
@@ -133,8 +135,6 @@ public sealed class Game : IDisposable
 
             obj.SetModel(_models.FirstOrDefault(model => model.Value.Id == state.ModelId).Value);
             obj.Texture = _resources.FirstOrDefault(resource => resource.Value.Id == state.ResourceId).Value;
-            obj.Triggers.AddRange(_triggers.Where(trigger 
-                => state.TriggersIds.Any(id => id == trigger.Value.Id)).Select(pair => pair.Value));
             var type = Type.GetType(state.BodyTypeName);
 
             if (type is not null)
@@ -153,7 +153,7 @@ public sealed class Game : IDisposable
             
             obj.Body.Position = Vector.ToVector3(state.Position);
             obj.Body.Scale = Vector.ToVector3(state.Scale);
-            obj.Body.Rotation = Vector.ToVector3(state.Rotation);
+            obj.Body.Rotation = Vector.ToQuaternion(state.Rotation);
             obj.Body.Color = Vector.ToVector4(state.Color);
             obj.Body.Visibility = (VisibilityType)state.VisibilityType;
             obj.Body.Visual = (BodyVisualType)state.Visual;
@@ -210,14 +210,14 @@ public sealed class Game : IDisposable
 
     #region AddMethods
     
-    public void Add(string name, [NotNull] IScene scene)
+    public void Add([NotNull] string name, [NotNull] IScene scene)
     {
-        TryAddName(name);
-        TryAddUid(scene);
-        AddMethod.Invoke(_scenes, name, scene);
+        TryAddName(name, GameAssetType.Scene);
+        TryAddUId(scene, GameAssetType.Scene);
+        _scenes.Add(name, scene);
     }
 
-    public void Add(string name, [NotNull] IPlace place, string sceneOrPlaceName)
+    public void Add([NotNull] string name, [NotNull] IPlace place, string sceneOrPlaceName)
     {
         if (_places.ContainsKey(sceneOrPlaceName))
             _places[sceneOrPlaceName].NeighbourPlaces.Add(place);
@@ -226,59 +226,119 @@ public sealed class Game : IDisposable
         else
             throw new ArgumentException("Scene or place with this name doesn't exists.", nameof(sceneOrPlaceName));
         
-        TryAddName(name);
-        TryAddUid(place);
-        AddMethod.Invoke(_places, name, place);
+        TryAddName(name, GameAssetType.Place);
+        TryAddUId(place, GameAssetType.Place);
+        _places.Add(name, place);
     }
     
-    public void Add(string name, [NotNull] IGameObject obj, string placeName)
+    public void Add([NotNull] string name, [NotNull] IGameObject obj, [NotNull] string placeName)
     {
         if (!_places.ContainsKey(placeName))
             throw new ArgumentException("Place with this name doesn't exists.", nameof(placeName));
         
-        TryAddName(name);
-        TryAddUid(obj);
+        TryAddName(name, GameAssetType.GameObject);
+        TryAddUId(obj, GameAssetType.GameObject);
         _places[placeName].GameObjects.Add(obj);
-        AddMethod.Invoke(_objects, name, obj);
+        _objects.Add(name, obj);
+        LoadQueue.Add(obj);
     }
     
-    public void Add(string name, [NotNull] IScript script, bool isFrameDependent = true)
+    public void Add([NotNull] string name, [NotNull] IScript script, bool isFrameDependent = true)
     {
-        TryAddName(name);
-        TryAddUid(script);
-        AddMethod.Invoke(isFrameDependent ? _frameScripts : _scripts, name, script);
-    }
-
-    public void Add(string name, [NotNull] ITrigger trigger, string objectName)
-    {
-        if (!_objects.ContainsKey(objectName))
-            throw new ArgumentException("Object with this name doesn't exists.", nameof(objectName));
+        TryAddName(name, GameAssetType.Script);
+        TryAddUId(script, GameAssetType.Script);
         
-        TryAddName(name);
-        TryAddUid(trigger);
-        _objects[objectName].Triggers.Add(trigger);
-        AddMethod.Invoke(_triggers, name, trigger);
+        if (isFrameDependent)
+            _frameScripts.Add(script);
+        
+        _scripts.Add(name, script);
     }
 
-    public void Add(string name, [NotNull] IResource resource)
+    public void Add([NotNull] string name, [NotNull] ITrigger trigger)
+    {
+        TryAddName(name, GameAssetType.Trigger);
+        TryAddUId(trigger, GameAssetType.Trigger);
+        _triggers.Add(name, trigger);
+    }
+
+    public void Add([NotNull] string name, [NotNull] IResource resource)
     {
         if (_resources.Select(pair => pair.Value.Path).Any(path => string.CompareOrdinal(path, resource.Path) == 0))
             throw new ArgumentException("Resource with this path already exists.", nameof(resource));
         
-        TryAddName(name);
-        TryAddUid(resource);
-        AddMethod.Invoke(_resources, name, resource);
+        TryAddName(name, GameAssetType.Resource);
+        TryAddUId(resource, GameAssetType.Resource);
+        _resources.Add(name, resource);
     }
 
-    public void Add(string name, IModel model)
+    public void Add([NotNull] string name, [NotNull] IModel model)
     {
-        TryAddName(name);
-        TryAddUid(model);
-        AddMethod.Invoke(_models, name, model);
+        TryAddName(name, GameAssetType.Model);
+        TryAddUId(model, GameAssetType.Model);
+        _models.Add(name, model);
     }
 
     #endregion
 
+    #region RemoveMethods
+
+    public void Remove([NotNull] string name)
+    {
+        if (!_names.ContainsKey(name))
+            return;
+        
+        var type = _names[name];
+        _names.Remove(name);
+        var obj = (IIdObject)_lists[type][name];
+        
+        switch (obj)
+        {
+            case null:
+                return;
+            case IScript script:
+                _frameScripts.Remove(script);
+                break;
+        }
+
+        _uIds.Remove(obj.Id);
+        _lists[type].Remove(name);
+    }
+
+    public void Remove(UId id)
+    {
+        if (!_uIds.ContainsKey(id))
+            return;
+        
+        var type = _uIds[id];
+        _uIds.Remove(id);
+        var name = string.Empty;
+        var obj = new object();
+
+        foreach (DictionaryEntry entry in _lists[type])
+        {
+            var idObj = (IIdObject)entry.Value;
+            
+            if (idObj is null)
+                continue;
+            
+            if (idObj.Id != id)
+                continue;
+
+            name = (string)entry.Key;
+            obj = entry.Value;
+            break;
+        }
+
+        _names.Remove(name);
+        
+        if (obj is IScript script)
+            _frameScripts.Remove(script);
+        
+        _lists[type].Remove(name);
+    }
+
+    #endregion
+    
     public TriggerHandler GetTriggerLoadObjects() => _window.TriggerLoadObjects;
 
     public TriggerHandler GetTriggerNextScene() => _window.TriggerNextScene;
@@ -289,20 +349,20 @@ public sealed class Game : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private static void TryAddUid(IIdObject obj)
+    private void TryAddUId(IIdObject obj, GameAssetType type)
     {
-        while (_uIds.Contains(obj.Id))
+        while (_uIds.ContainsKey(obj.Id))
             obj.Id = new UId();
 
-        _uIds.Add(obj.Id);
+        _uIds.Add(obj.Id, type);
     }
     
-    private static void TryAddName(string name)
+    private void TryAddName(string name, GameAssetType type)
     {
-        if (_names.Contains(name))
+        if (_names.ContainsKey(name))
             throw new ArgumentException("Object with this name already exists.", nameof(name));
 
-        _names.Add(name);
+        _names.Add(name, type);
     }
 
     private void ReleaseUnmanagedResources() => _window?.Dispose();
@@ -324,6 +384,7 @@ public sealed class Game : IDisposable
             _frameScripts = null;
             _resources = null;
             _models = null;
+            Saver = null;
         }
         
         ReleaseUnmanagedResources();

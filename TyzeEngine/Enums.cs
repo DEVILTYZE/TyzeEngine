@@ -35,3 +35,14 @@ public enum SaveStatus
     Succeed = 1,
     Error = 2
 }
+
+public enum GameAssetType
+{
+    Scene = 0,
+    Place = 1,
+    GameObject = 2,
+    Script = 3,
+    Trigger = 4,
+    Resource = 5,
+    Model = 6
+}

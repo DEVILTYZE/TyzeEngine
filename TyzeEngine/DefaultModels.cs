@@ -36,8 +36,8 @@ internal static class DefaultModels
 
     private static Vector3[] GetPointVertices() => new[] { new Vector3(0, 0, 0) };
     
-    private static Vector3[] GetTriangleVertices() 
-        => new[] { new Vector3(-1f, -1, 0), new Vector3(1, -1, 0), new Vector3(0, 1f, 0) };
+    private static Vector3[] GetTriangleVertices() => 
+        new[] { new Vector3(-1f, -1, 0), new Vector3(1, -1, 0), new Vector3(0, 1f, 0) };
 
     private static Vector3[] GetRectangleVertices() => new[]
     {

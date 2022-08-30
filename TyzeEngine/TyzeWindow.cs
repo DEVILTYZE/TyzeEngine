@@ -9,13 +9,14 @@ using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using TyzeEngine.GameStructure;
 using TyzeEngine.Interfaces;
+using TyzeEngine.Objects;
 
 namespace TyzeEngine;
 
 internal sealed class TyzeWindow : GameWindow
 {
     private Shader _shader;
-    private Matrix4 _view, _projection;
+    private Matrix4 _projection;
     
     // AUDIO
     private ALDevice _device;
@@ -42,7 +43,6 @@ internal sealed class TyzeWindow : GameWindow
         : base(gameWindowSettings, nativeWindowSettings)
     {
         TriggerLoadObjects += LoadObjects;
-        TriggerNextScene += LoadScene;
         VSync = VSyncMode.Off;
 
         // SHOW FPS настройки.
@@ -66,13 +66,12 @@ internal sealed class TyzeWindow : GameWindow
         InitializeAudio();
         _shader = new Shader(Constants.ShaderVertTexturePath, Constants.ShaderFragTexturePath);
         _shader.Enable();
-
-        _view = Matrix4.CreateTranslation(0, 0, -10);
-        _projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(45f), 
+        
+        _projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(45), 
             Size.X / (float)Size.Y, .1f, 100);
 
         CurrentScene.Run();
-        LoadObjects(new TriggeredEventArgs(false));
+        LoadObjects();
     }
 
     protected override void OnRenderFrame(FrameEventArgs args)
@@ -96,7 +95,7 @@ internal sealed class TyzeWindow : GameWindow
             Close();
 
         foreach (var script in Scripts)
-            script.Execute(new TriggeredEventArgs(args.Time));
+            script.Execute();
 
         // something...
     }
@@ -119,9 +118,9 @@ internal sealed class TyzeWindow : GameWindow
         base.OnUnload();
     }
     
-    private void LoadObjects(TriggeredEventArgs args)
+    private void LoadObjects()
     {
-        var objects = args is not null && (bool)args.Data ? GetNewObjects() : GetCurrentObjects();
+        var objects = GetNewObjects();
         const int stride = Constants.Vector3Stride + Constants.Vector2Stride + Constants.Vector4Stride;
         
         // Загрузка объекта.
@@ -133,9 +132,6 @@ internal sealed class TyzeWindow : GameWindow
             if (IsDebugMode)
                 ArrayObject.Primitive = PrimitiveType.LineLoop;
 
-            if (obj.Body?.Visibility is VisibilityType.Collapsed or VisibilityType.Hidden)
-                continue;
-            
             obj.ArrayObject.Enable();
             // Получение точек позиции объекта в пространстве, текстуры в пространстве и цвета в виде массива float
             // и получение массива uint для Element object.
@@ -168,7 +164,7 @@ internal sealed class TyzeWindow : GameWindow
             
             obj.ArrayObject.Disable();
             // Связывание ресурсов для текущего объекта.
-            obj.Texture?.Enable();
+            obj.Texture?.Enable(); // А нахуя? А я уже не помню.
         }
     }
 
@@ -182,45 +178,42 @@ internal sealed class TyzeWindow : GameWindow
             // ROTATION
             var angularAcceleration = body.Torque * body.InverseInertia;
             body.AngularVelocity += angularAcceleration * time;
-            body.Rotation += body.AngularVelocity * time;
-            var rotationX = scale * Matrix4.CreateRotationX(body.Rotation.X);
-            var rotationY = rotationX * Matrix4.CreateRotationY(body.Rotation.Y);
-            var rotationZ = rotationY * Matrix4.CreateRotationZ(body.Rotation.Z);
-            
+            body.Rotation = Quaternion.FromEulerAngles(body.AngularVelocity) * time;
+            var rotation = scale * Matrix4.CreateFromQuaternion(body.Rotation);
+
             // TRANSLATION
             var acceleration = body.Force * body.InverseMass + body.GravityForce;
             body.Velocity += acceleration * time;
             body.Position += body.Velocity * time;
             
-            return rotationZ * Matrix4.CreateTranslation(body.Position);
+            return rotation * Matrix4.CreateTranslation(body.Position);
         }
+
+        var objects = new[] { CurrentPlace }.Concat(CurrentPlace.NeighbourPlaces).SelectMany(place => 
+            place.GameObjects).ToList();
+        var objectList = objects.Where(obj => obj.Body?.Visibility is VisibilityType.Visible).ToList();
         
-        var objects = GetCurrentObjects().ToList();
-        
-        foreach (var obj in objects)
+        foreach (var obj in objectList)
         {
             obj.ArrayObject.Enable();
             obj.Texture?.Enable();
             _shader.SetMatrix4("model", GetMatrix(obj.Body));
-            _shader.SetMatrix4("view", _view);
+            _shader.SetMatrix4("view", Camera.Instance.ViewMatrix);
             _shader.SetMatrix4("projection", _projection);
             obj.ArrayObject.Draw(DrawElementsType.UnsignedInt);
             obj.Texture?.Disable();
         }
 
-        objects = objects.Where(obj => obj.Body is not null && obj.Body.IsEnabled).ToList();
-        PhysicsGenerator.DetermineCollision(objects);
+        objectList = objects.Where(obj => 
+            obj.Body is not null && 
+            obj.Body.Visibility is not VisibilityType.Collapsed && 
+            obj.Body.IsEnabled).ToList();
+        PhysicsGenerator.DetermineCollision(objectList);
     }
-
-    private void LoadScene(TriggeredEventArgs args) => CurrentSceneIndex = (int)args.Data;
-
-    private IEnumerable<IGameObject> GetCurrentObjects()
-        => new[] { CurrentPlace }.Concat(CurrentPlace.NeighbourPlaces).SelectMany(place => place.GameObjects);
 
     private IEnumerable<IGameObject> GetNewObjects()
     {
         var objects = LoadQueue.TakeObjects().ToArray();
-        CurrentPlace.GameObjects.AddRange(objects);
         CurrentScene.LoadResources();
 
         return objects;

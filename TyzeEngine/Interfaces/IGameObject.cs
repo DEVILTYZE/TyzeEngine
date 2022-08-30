@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using OpenTK.Graphics.OpenGL4;
 using TyzeEngine.Resources;
 
@@ -13,8 +12,6 @@ public interface IGameObject : IDisposable, IDeepCloneable<IGameObject>, IIdObje
     IModel Model { get; }
     IBody Body { get; set; }
     IResource Texture { get; set; }
-    List<ITrigger> Triggers { get; }
-    List<IScript> Scripts { get; }
     bool SaveStatus { get; set; }
     
     internal void SetModel(IModel model);

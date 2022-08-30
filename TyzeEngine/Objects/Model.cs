@@ -131,9 +131,9 @@ public class Model : IModel
         GC.SuppressFinalize(this);
     }
 
-    public static IModel Find(string name)
+    public static IModel FindOrDefault(string name)
     {
-        var isFound = Game.Models.TryGetValue(name, out var value);
+        var isFound = Game.Instance.Models.TryGetValue(name, out var value);
 
         return isFound ? value : null;
     }

@@ -25,9 +25,9 @@ public static class LoadQueue
             _resourceQueue.Enqueue(resource);
     }
 
-    public static void Add([NotNull] IGameObject obj) => _objectQueue.Enqueue(obj);
+    internal static void Add([NotNull] IGameObject obj) => _objectQueue.Enqueue(obj);
 
-    public static void AddRange([NotNull] IEnumerable<IGameObject> objects)
+    internal static void AddRange([NotNull] IEnumerable<IGameObject> objects)
     {
         foreach (var obj in objects)
             _objectQueue.Enqueue(obj);
@@ -49,7 +49,7 @@ public static class LoadQueue
 
     public static IModel TakeModel() => _modelQueue.Dequeue();
     
-    public static IEnumerable<IGameObject> TakeObjects()
+    internal static IEnumerable<IGameObject> TakeObjects()
     {
         var objects = _objectQueue.ToArray();
         _objectQueue = new Queue<IGameObject>(DefaultCount);

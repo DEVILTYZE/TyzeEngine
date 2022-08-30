@@ -57,8 +57,6 @@ public sealed class Scene : IScene
         // Other settings...
     }
 
-    public void LoadScene(UId id) => LoadSceneHandler?.Invoke(new TriggeredEventArgs(id));
-
     public void LoadResources()
     {
         while (LoadQueue.HasNewResources)
@@ -82,9 +80,9 @@ public sealed class Scene : IScene
         GC.SuppressFinalize(this);
     }
 
-    public static IScene Find(string name)
+    public static IScene FindOrDefault(string name)
     {
-        var isFound = Game.Scenes.TryGetValue(name, out var value);
+        var isFound = Game.Instance.Scenes.TryGetValue(name, out var value);
 
         return isFound ? value : null;
     }

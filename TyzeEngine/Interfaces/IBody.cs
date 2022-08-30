@@ -8,7 +8,7 @@ public interface IBody : IDeepCloneable<IBody>
 {
     Vector3 Position { get; set; }
     Vector3 Scale { get; set; }
-    Vector3 Rotation { get; set; }
+    Quaternion Rotation { get; set; }
     Matrix3 RotationMatrix { get; }
     Vector4 Color { get; set; }
     VisibilityType Visibility { get; set; }

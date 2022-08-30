@@ -1,36 +1,30 @@
-﻿using TyzeEngine.GameStructure;
-using TyzeEngine.Interfaces;
+﻿using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Objects;
 
 public sealed class Trigger : ITrigger
 {
-    private readonly int _placeId = -1;
     private event TriggerHandler Triggered;
 
     public UId Id { get; set; } = new();
     public bool IsTriggered { get; set; }
     public bool SaveStatus { get; }
 
-    private Trigger(bool notSave) => SaveStatus = !notSave;
+    public Trigger(bool notSave = true) => SaveStatus = !notSave;
 
-    public Trigger(IScene scene, int placeId, bool notSave = false) : this(notSave)
-    {
-        _placeId = placeId;
-        Triggered += scene.LoadPlace;
-    }
+    public void AddScript(IScript script) => Triggered += script.Execute;
 
-    public Trigger(IScript script, bool notSave = false) : this(notSave) => Triggered += script.Execute;
-    
+    public void RemoveScript(IScript script) => Triggered -= script.Execute;
+
     public void OnTriggered()
     {
-        Triggered?.Invoke(new TriggeredEventArgs(_placeId));
+        Triggered?.Invoke();
         IsTriggered = true;
     }
 
-    public static ITrigger Find(string name)
+    public static ITrigger FindOrDefault(string name)
     {
-        var isFound = Game.Triggers.TryGetValue(name, out var value);
+        var isFound = Game.Instance.Triggers.TryGetValue(name, out var value);
 
         return isFound ? value : null;
     }

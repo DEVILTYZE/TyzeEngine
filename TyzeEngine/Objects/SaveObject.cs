@@ -50,7 +50,6 @@ public struct SaveObjectState : ISaveable
     public UId Id { get; set; }
     public UId ModelId { get; set; }
     public UId ResourceId { get; set; }
-    public UId[] TriggersIds { get; set; }
     public string BodyTypeName { get; set; }
     public byte[] Position { get; set; }
     public byte[] Scale { get; set; }
@@ -69,11 +68,10 @@ public struct SaveObjectState : ISaveable
         Id = obj.Id;
         ModelId = obj.Model.Id;
         ResourceId = obj.Texture.Id;
-        TriggersIds = obj.Triggers.Where(trigger => trigger.SaveStatus).Select(trigger => trigger.Id).ToArray();
         BodyTypeName = obj.Body.GetType().FullName;
         Position = Vector.ToBytes(obj.Body.Position);
         Scale = Vector.ToBytes(obj.Body.Scale);
-        Rotation = Vector.ToBytes(obj.Body.Scale);
+        Rotation = Vector.ToBytes(obj.Body.Rotation);
         Color = Vector.ToBytes(obj.Body.Color);
         VisibilityType = (int)obj.Body.Visibility;
         Visual = (int)obj.Body.Visual;

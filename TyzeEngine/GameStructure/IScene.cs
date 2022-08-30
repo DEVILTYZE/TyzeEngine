@@ -20,6 +20,5 @@ public interface IScene : IDisposable, IIdObject
 
     void LoadPlace(TriggeredEventArgs args);
     void Run();
-    void LoadScene(UId id);
     void LoadResources();
 }

@@ -33,7 +33,7 @@ internal static class Constants
     internal static readonly Vector3 DefaultPosition = new(0, 0, 0);
     internal static readonly Vector3 DefaultSize = new(1, 1, 1);
     internal static readonly Vector3 DefaultSize2D = new(1, 1, 0);
-    internal static readonly Vector3 DefaultRotation = new(0, 0, 0);
+    internal static readonly Quaternion DefaultRotation = new(0, 0, 0);
     internal static readonly Vector4 DefaultColor = new(.5f, .5f, .5f, 1);
     internal static readonly Vector4 NullColor = new(0, 0, 0, 0);
     

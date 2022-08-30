@@ -8,11 +8,11 @@ public abstract class Script : IScript
     public UId Id { get; set; } = new();
     public KeyboardState KeyboardState { get; private set; }
 
-    public abstract void Execute(TriggeredEventArgs args = null);
+    public abstract void Execute();
 
-    public static IScript Find(string name)
+    public static IScript FindOrDefault(string name)
     {
-        var isFound = Game.Scripts.TryGetValue(name, out var value);
+        var isFound = Game.Instance.Scripts.TryGetValue(name, out var value);
 
         return isFound ? value : null;
     }

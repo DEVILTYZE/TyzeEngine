@@ -27,6 +27,18 @@ internal static class Vector
             
         return new Vector4(floats[0], floats[1], floats[2], floats[3]);
     }
+
+    internal static Quaternion ToQuaternion(byte[] data)
+    {
+        var floats = BytesToFloats(data, Constants.Vector4Length).ToArray();
+        
+        return new Quaternion(floats[0], floats[1], floats[2], floats[3]);
+    }
+
+    // internal static Quaternion ToQuaternion(Vector3 vector)
+    // {
+    //     
+    // }
     
     internal static byte[] ToBytes(Vector2 vector)
     {
@@ -48,7 +60,15 @@ internal static class Vector
 
         return GetBytes(new[] { x, y, z, w }, Constants.Vector4Stride);
     }
-    
+
+    internal static byte[] ToBytes(Quaternion quaternion)
+    {
+        var (x, y, z) = quaternion.Xyz;
+        var w = quaternion.W;
+        
+        return GetBytes(new[] { x, y, z, w }, Constants.Vector4Stride);
+    }
+
     internal static byte[] GetBytes(IReadOnlyList<float> floats, int vectorLength)
     {
         var data = new byte[vectorLength];
