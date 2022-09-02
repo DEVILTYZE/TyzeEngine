@@ -9,28 +9,28 @@ internal static class Vector
 {
     internal static Vector2 ToVector2(byte[] data)
     {
-        var floats = BytesToFloats(data, Constants.Vector2Length).ToArray();
+        var floats = ToFloats(data, Constants.Vector2Length).ToArray();
             
         return new Vector2(floats[0], floats[1]);
     }
     
     internal static Vector3 ToVector3(byte[] data)
     {
-        var floats = BytesToFloats(data, Constants.Vector3Length).ToArray();
+        var floats = ToFloats(data, Constants.Vector3Length).ToArray();
             
         return new Vector3(floats[0], floats[1], floats[2]);
     }
 
     internal static Vector4 ToVector4(byte[] data)
     {
-        var floats = BytesToFloats(data, Constants.Vector4Length).ToArray();
+        var floats = ToFloats(data, Constants.Vector4Length).ToArray();
             
         return new Vector4(floats[0], floats[1], floats[2], floats[3]);
     }
 
     internal static Quaternion ToQuaternion(byte[] data)
     {
-        var floats = BytesToFloats(data, Constants.Vector4Length).ToArray();
+        var floats = ToFloats(data, Constants.Vector4Length).ToArray();
         
         return new Quaternion(floats[0], floats[1], floats[2], floats[3]);
     }
@@ -84,11 +84,23 @@ internal static class Vector
         return data;
     }
     
-    internal static IEnumerable<float> BytesToFloats(byte[] data, int length)
+    internal static IEnumerable<float> ToFloats(byte[] data, int length)
     {
         const int stride = sizeof(float);
 
         for (var i = 0; i < length; ++i)
             yield return BitConverter.ToSingle(data, i * stride);
+    }
+
+    internal static IEnumerable<float> ToFloats(Vector3 vector) => new[] { vector.X, vector.Y, vector.Z };
+
+    internal static IEnumerable<float> ToFloats(Vector4 vector) => new[] { vector.X, vector.Y, vector.Z, vector.W };
+
+    internal static Vector3 Abs(Vector3 vector)
+    {
+        for (var i = 0; i < 3; ++i)
+            vector[i] = MathF.Abs(vector[i]);
+
+        return vector;
     }
 }

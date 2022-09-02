@@ -59,7 +59,7 @@ public struct SaveObjectState : ISaveable
     public int Visual { get; set; }
     public ushort CollisionLayer { get; set; }
     public byte[] Material { get; set; }
-    public byte[] Forces { get; set; }
+    public byte[] Force { get; set; }
     public byte[] GravityForce { get; set; }
     public bool IsEnabled { get; set; }
     
@@ -67,17 +67,17 @@ public struct SaveObjectState : ISaveable
     {
         Id = obj.Id;
         ModelId = obj.Model.Id;
-        ResourceId = obj.Texture.Id;
+        ResourceId = obj.Transformation.Texture.Id;
         BodyTypeName = obj.Body.GetType().FullName;
-        Position = Vector.ToBytes(obj.Body.Position);
-        Scale = Vector.ToBytes(obj.Body.Scale);
-        Rotation = Vector.ToBytes(obj.Body.Rotation);
-        Color = Vector.ToBytes(obj.Body.Color);
-        VisibilityType = (int)obj.Body.Visibility;
-        Visual = (int)obj.Body.Visual;
+        Position = Vector.ToBytes(obj.Transformation.Position);
+        Scale = Vector.ToBytes(obj.Transformation.Scale);
+        Rotation = Vector.ToBytes(obj.Transformation.Rotation);
+        Color = Vector.ToBytes(obj.Transformation.Color);
+        VisibilityType = (int)obj.Transformation.Visibility;
+        Visual = (int)obj.Transformation.Visual;
         CollisionLayer = obj.Body.CollisionLayer;
         Material = MaterialToBytes(obj.Body.Material);
-        Forces = null;
+        Force = Vector.ToBytes(obj.Body.Force);
         GravityForce = Vector.ToBytes(obj.Body.GravityForce);
         IsEnabled = obj.Body.IsEnabled;
     }

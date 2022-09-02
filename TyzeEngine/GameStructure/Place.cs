@@ -24,13 +24,13 @@ public sealed class Place : IPlace
 
     public static IPlace FindOrDefault(string name)
     {
-        var isFound = Game.Instance.Places.TryGetValue(name, out var value);
+        var isFound = Game.Places.TryGetValue(name, out var value);
 
         return isFound ? value : null;
     }
 
     IEnumerable<UId> IPlace.GetResourceIds() 
-        => from texture in GameObjects.Select(obj => obj.Texture) 
+        => from texture in GameObjects.Select(obj => obj.Transformation.Texture) 
             where texture is not null 
             select texture.Id;
 

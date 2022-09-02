@@ -3,7 +3,7 @@ using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Resources;
 
-public interface IResource : IDisposable, IIdObject
+public interface IResource : IDisposable, IUIdObject
 {
     int Handle { get; }
     string Path { get; }

@@ -2,10 +2,8 @@
 
 namespace TyzeEngine.Interfaces;
 
-public interface IScript : IIdObject
+public interface IScript : IUIdObject
 {
-    KeyboardState KeyboardState { get; }
-
+    void Prepare();
     void Execute();
-    internal void SetKeyboardState(KeyboardState state);
 }

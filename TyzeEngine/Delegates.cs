@@ -17,16 +17,16 @@ public class TriggeredEventArgs : EventArgs
 
 public class CollisionEventArgs : EventArgs
 {
-    public IBody BodyA { get; }
-    public IBody BodyB { get; }
+    public IGameObject ObjectA { get; }
+    public IGameObject ObjectB { get; }
     public Vector3 Normal { get; set; }
     public float Penetration { get; set; }
     public bool IsCollides { get; set; }
 
-    public CollisionEventArgs(IBody bodyA, IBody bodyB)
+    public CollisionEventArgs(IGameObject objectA, IGameObject objectB)
     {
-        BodyA = bodyA;
-        BodyB = bodyB;
+        ObjectA = objectA;
+        ObjectB = objectB;
         Normal = Vector3.Zero;
         Penetration = 0;
         IsCollides = false;

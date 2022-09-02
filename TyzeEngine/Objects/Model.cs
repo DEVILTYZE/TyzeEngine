@@ -19,11 +19,19 @@ public class Model : IModel
     public string Name { get; private set; }
     public bool Loaded { get; private set; }
 
-    public static IModel Point => new Model(DefaultModels.GetPoint()) { Loaded = true };
-    public static IModel Triangle => new Model(DefaultModels.GetTriangle()) { Loaded = true };
-    public static IModel Rectangle => new Model(DefaultModels.GetRectangle()) { Loaded = true };
-    public static IModel Circle => new Model(DefaultModels.GetCircle()) { Loaded = true };
-    // public static IModel Cube => new Model(Constants.TriangleModelName, Constants.DefaultModelsDirectory);
+    public static IModel Point => new Model(DefaultModels.GetPoint());
+    public static IModel Triangle => new Model(DefaultModels.GetTriangle());
+    public static IModel Rectangle => new Model(DefaultModels.GetRectangle());
+    public static IModel Circle => new Model(DefaultModels.GetCircle());
+    public static IModel Cube => new Model(DefaultModels.GetCube());
+    public static IModel Sphere
+    {
+        get
+        {
+            var data = DefaultModels.GetSphere(3, 3);
+            return new Model((data.Item1, data.Item2)) { _texture = data.Item3 };
+        }
+    }
 
     private Model((Vector3[], uint[]) coordinates)
     {
@@ -90,13 +98,6 @@ public class Model : IModel
 
     public (float[], uint[]) GetVectorArray(IGameObject obj)
     {
-        (float[], uint[]) GetArrayVisibility(float[] texture) => obj.Body.Visibility switch
-        {
-            VisibilityType.Hidden => (GetArrays(texture, Constants.NullColor), _indices),
-            VisibilityType.Collapsed => (new[] { 0f, 0, 0, -1, -1, 0, 0, 0, 0 }, new uint[] { 1 }),
-            VisibilityType.Visible or _ => (GetArrays(texture, obj.Body.Color), _indices)
-        };
-        
         float[] GetArrays(float[] texture, Vector4 color)
         {
             const int tStride = 2;
@@ -114,15 +115,20 @@ public class Model : IModel
 
         var texture = Enumerable.Repeat(new[] { -1f, -1 }, Vertices.Count).SelectMany(x => x).ToArray();
 
-        if (obj.Body.Visual is not (BodyVisualType.Texture or BodyVisualType.ColorAndTexture))
-            return GetArrayVisibility(texture);
-        
-        texture = obj.Body.Visual == BodyVisualType.Texture ? _texture.GetArray() : null;
-            
-        if (obj.Body.Visual == BodyVisualType.Texture)
-            obj.Body.Color = Constants.NullColor;
+        switch (obj.Transformation.Visual)
+        {
+            case BodyVisualType.Color:
+                return (GetArrays(texture, obj.Transformation.Color), _indices);
+            case BodyVisualType.Texture:
+                obj.Transformation.Color = Constants.NullColor;
+                break;
+            case BodyVisualType.ColorAndTexture:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(obj.Transformation.Visual), "Visual error.");
+        }
 
-        return GetArrayVisibility(texture);
+        return (GetArrays(_texture.GetArray(), obj.Transformation.Color), _indices);
     }
 
     public void Dispose()
@@ -133,7 +139,7 @@ public class Model : IModel
 
     public static IModel FindOrDefault(string name)
     {
-        var isFound = Game.Instance.Models.TryGetValue(name, out var value);
+        var isFound = Game.Models.TryGetValue(name, out var value);
 
         return isFound ? value : null;
     }

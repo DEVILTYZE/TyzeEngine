@@ -82,7 +82,7 @@ public sealed class Scene : IScene
 
     public static IScene FindOrDefault(string name)
     {
-        var isFound = Game.Instance.Scenes.TryGetValue(name, out var value);
+        var isFound = Game.Scenes.TryGetValue(name, out var value);
 
         return isFound ? value : null;
     }

@@ -4,7 +4,7 @@ using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.GameStructure;
 
-public interface IPlace : IDisposable, IIdObject
+public interface IPlace : IDisposable, IUIdObject
 {
     List<IPlace> NeighbourPlaces { get; set; }
     List<IGameObject> GameObjects { get; set; }

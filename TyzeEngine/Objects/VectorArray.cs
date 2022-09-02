@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Objects;
@@ -22,7 +23,7 @@ public class VectorArray : IVectorArray
         Type = type;
     }
 
-    public void AddVector(float x)
+    public void Add(float x)
     {
         if (Type != ArrayType.Unknown) 
             return;
@@ -31,7 +32,7 @@ public class VectorArray : IVectorArray
         _list.Add(x);
     }
 
-    public void AddVector(float x, float y)
+    public void Add(float x, float y)
     {
         if (Type != ArrayType.Unknown) 
             return;
@@ -40,7 +41,7 @@ public class VectorArray : IVectorArray
         _list.AddRange(new[] { x, y });
     }
 
-    public void AddVector(float x, float y, float z)
+    public void Add(float x, float y, float z)
     {
         if (Type != ArrayType.Unknown) 
             return;
@@ -49,13 +50,13 @@ public class VectorArray : IVectorArray
         _list.AddRange(new[] { x, y, z });
     }
 
-    public void AddVector(float x, float y, float z, float t)
+    public void Add(float x, float y, float z, float w)
     {
         if (Type != ArrayType.Unknown) 
             return;
         
         Type = ArrayType.FourDimensions;
-        _list.AddRange(new[] { x, y, z, t });
+        _list.AddRange(new[] { x, y, z, w });
     }
 
     float[] IVectorArray.GetArray() => _list.ToArray();

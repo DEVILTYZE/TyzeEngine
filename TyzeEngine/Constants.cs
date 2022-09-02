@@ -30,6 +30,7 @@ internal static class Constants
     internal const int Vector3Stride = Vector3Length * sizeof(float);
     internal const int Vector4Length = 4;
     internal const int Vector4Stride = Vector4Length * sizeof(float);
+    internal const int VectorStride = Vector3Stride + Vector2Stride + Vector4Stride;
     internal static readonly Vector3 DefaultPosition = new(0, 0, 0);
     internal static readonly Vector3 DefaultSize = new(1, 1, 1);
     internal static readonly Vector3 DefaultSize2D = new(1, 1, 0);

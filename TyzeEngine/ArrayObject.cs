@@ -11,7 +11,6 @@ internal sealed class ArrayObject : IDisposable
     private bool _disposed;
     private int _count;
 
-    internal static PrimitiveType Primitive { get; set; } = PrimitiveType.Triangles;
     internal int Handle { get; }
     internal bool IsEnabled { get; private set; }
 
@@ -64,25 +63,25 @@ internal sealed class ArrayObject : IDisposable
             GL.DisableVertexAttribArray(locationAttribute);
     }
 
-    internal void Draw() => Draw(0, _count);
+    internal void Draw(PrimitiveType primitive) => Draw(primitive, 0, _count);
 
-    internal void Draw(DrawElementsType type) => Draw(0, _count, type);
+    internal void Draw(PrimitiveType primitive, DrawElementsType type) => Draw(primitive, 0, _count, type);
     
-    internal void Draw(int startIndex, int endIndex)
+    internal void Draw(PrimitiveType primitive, int startIndex, int endIndex)
     {
         if (!IsEnabled)
             Enable();
 
-        GL.DrawArrays(Primitive, startIndex, endIndex);
+        GL.DrawArrays(primitive, startIndex, endIndex);
         Disable();
     }
 
-    internal void Draw(int startIndex, int endIndex, DrawElementsType type)
+    internal void Draw(PrimitiveType primitive, int startIndex, int endIndex, DrawElementsType type)
     {
         if (!IsEnabled)
             Enable();
 
-        GL.DrawElements(Primitive, endIndex, type, startIndex);
+        GL.DrawElements(primitive, endIndex, type, startIndex);
         Disable();
     }
 

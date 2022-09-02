@@ -1,6 +1,6 @@
 ﻿namespace TyzeEngine.Interfaces;
 
-public interface IIdObject
+public interface IUIdObject
 {
     UId Id { get; set; }
 }

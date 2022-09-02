@@ -14,11 +14,10 @@ public class PolygonBody : Body
         init
         {
             _vertices = value;
-            RecomputeBodyParameters(Scale);
+            // RecomputeBodyParameters(Scale);
         }
     }
     public Vector2[] Normals { get; private set; }
-    public new Matrix2 RotationMatrix => new(base.RotationMatrix.Row0.Xy, base.RotationMatrix.Row1.Xy);
 
     public PolygonBody(IMaterial material) : base(material)
     {
@@ -76,7 +75,7 @@ public class PolygonBody : Body
         SetMassAndInertia(Material.Density * area, Material.Density * inertia);
     }
 
-    protected override void RecomputeBodyParameters(Vector3 newScale)
+    internal override void RecomputeBodyParameters(Vector3 newScale)
     {
         if (Vertices is null)
             return;

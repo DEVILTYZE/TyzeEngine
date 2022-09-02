@@ -22,7 +22,7 @@ public class EllipseBody : Body
         SetMassAndInertia(MathF.PI * r2 * Material.Density, .5f * Mass * r2);
     }
 
-    protected override void RecomputeBodyParameters(Vector3 newScale)
+    internal override void RecomputeBodyParameters(Vector3 newScale)
     {
         if (Radius == 0)
             return;

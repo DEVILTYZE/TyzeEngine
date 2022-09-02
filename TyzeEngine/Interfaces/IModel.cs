@@ -4,7 +4,7 @@ using OpenTK.Mathematics;
 
 namespace TyzeEngine.Interfaces;
 
-public interface IModel : IDisposable, IIdObject
+public interface IModel : IDisposable, IUIdObject
 {
     IReadOnlyList<Vector3> Vertices { get; }
     IEnumerable<Vector2> Vertices2D { get; }

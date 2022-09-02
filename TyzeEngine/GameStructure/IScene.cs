@@ -6,7 +6,7 @@ using TyzeEngine.Resources;
 
 namespace TyzeEngine.GameStructure;
 
-public interface IScene : IDisposable, IIdObject
+public interface IScene : IDisposable, IUIdObject
 {
     internal Task LoadingPlacesTask { get; }
     

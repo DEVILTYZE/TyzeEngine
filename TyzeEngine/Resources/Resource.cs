@@ -44,7 +44,7 @@ public abstract class Resource : IResource
     
     public static IResource FindOrDefault(string name)
     {
-        var isFound = Game.Instance.Resources.TryGetValue(name, out var value);
+        var isFound = Game.Resources.TryGetValue(name, out var value);
 
         return isFound ? value : null;
     }
