@@ -9,64 +9,138 @@ public sealed class Camera : ICamera
     private static readonly Lazy<Camera> InstanceHolder = new(() => new Camera());
     public static ICamera Instance => InstanceHolder.Value;
 
+    private bool _isInverted, _isFirstFrame = true;
+    private Vector2 _lastPos;
     private Vector3 _direction, _up;
+    private float _pitch, _yaw, _fov, _invertedControlCoef = 1;
+    private Vector3 Right => Vector3.Cross(_direction, _up);
 
-    public static Vector3 ForwardVector => new(0, 0, -1);
-    public static Vector3 UpVector => new(0, 1, 0);
-    public static Vector3 RightVector => new(1, 0, 0);
-    
     public Vector3 Position { get; set; }
-    public Vector3 Direction { get => _direction; set => _direction = Vector3.NormalizeFast(value); }
-    public Vector3 Up { get => _up; set => _up = Vector3.NormalizeFast(value); }
-    public Matrix4 ViewMatrix => Matrix4.LookAt(Position, Position + Direction, Up);
+    public float AspectRatio { get; set; }
+    public Matrix4 View => Matrix4.LookAt(Position, Position + _direction, _up);
+    public Matrix4 Projection => Matrix4.CreatePerspectiveFieldOfView(_fov, AspectRatio, .01f, 100);
+    
+    public float Pitch
+    {
+        get => MathHelper.RadiansToDegrees(_pitch);
+        set
+        {
+            var angle = MathHelper.Clamp(value, -89, 89);
+            _pitch = MathHelper.DegreesToRadians(angle);
+            Update();
+        }
+    }
+
+    public float Yaw
+    {
+        get => MathHelper.RadiansToDegrees(_yaw);
+        set
+        {
+            _yaw = MathHelper.DegreesToRadians(value % 360);
+            Update();
+        }
+    }
+    
+    public float Fov
+    {
+        get => MathHelper.RadiansToDegrees(_fov);
+        set
+        {
+            var angle = MathHelper.Clamp(value, 1, 90);
+            _fov = MathHelper.DegreesToRadians(angle);
+        }
+    }
+
+    public bool IsInverted
+    {
+        get => _isInverted;
+        set
+        {
+            if (value)
+                _invertedControlCoef = -1;
+            else
+                _invertedControlCoef = 1;
+
+            _isInverted = value;
+        }
+    }
 
     private Camera() => ToDefault();
 
-    public void Rotate(Vector3 eulerAngles)
+    public void Move(float speed, float time)
     {
-        var matrix = Matrix3.CreateFromQuaternion(Quaternion.FromEulerAngles(eulerAngles));
-        Direction *= matrix;
-        Up *= matrix;
+        var speedAtTime = speed * time;
+        
+        if (Input.IsDown(KeyCode.W) || Input.IsDown(KeyCode.Up))
+            Position += _direction * speedAtTime;
+        else if (Input.IsDown(KeyCode.S) || Input.IsDown(KeyCode.Down))
+            Position -= _direction * speedAtTime;
+        if (Input.IsDown(KeyCode.D) || Input.IsDown(KeyCode.Right))
+            Position += Right * speedAtTime;
+        else if (Input.IsDown(KeyCode.A) || Input.IsDown(KeyCode.Left))
+            Position -= Right * speedAtTime;
+        if (Input.IsDown(KeyCode.Space) || Input.IsDown(KeyCode.NumPadNum0))
+            Position += _up * speedAtTime;
+        else if (Input.IsDown(KeyCode.LCtrl) || Input.IsDown(KeyCode.RCtrl))
+            Position -= _up * speedAtTime;
     }
 
-    public void ControlDefault(float speed, float straightAngle, float sideAngle)
+    public void Rotate(float sensitivity, float time)
     {
-        if (Input.IsDown(KeyCode.W))
-            Position += ForwardVector * speed;
-        else if (Input.IsDown(KeyCode.S))
-            Position -= ForwardVector * speed;
-        if (Input.IsDown(KeyCode.D))
-            Position += RightVector * speed;
-        else if (Input.IsDown(KeyCode.A))
-            Position -= RightVector * speed;
-        if (Input.IsDown(KeyCode.Space))
-            Position += UpVector * speed;
-        else if (Input.IsDown(KeyCode.LCtrl))
-            Position -= UpVector * speed;
+        if (_isFirstFrame)
+        {
+            _lastPos = Input.MousePosition;
+            _isFirstFrame = false;
+            
+            return;
+        }
+        
+        var sensitivityAtTime = sensitivity * time;
+        var deltaX = (Input.MousePosition.X - _lastPos.X) * sensitivityAtTime;
+        var deltaY = (Input.MousePosition.Y - _lastPos.Y) * sensitivityAtTime * _invertedControlCoef;
+        _lastPos = Input.MousePosition;
+        
+        Yaw += deltaX;
+        Pitch += deltaY;
+    }
+    
+    public void FocusToWorldCenter()
+    {
+        // VECTORS
+        _direction = Vector3.NormalizeFast(Vector3.Zero - Position);
+        var right = Vector3.NormalizeFast(Vector3.Cross(_direction, -Vector3.UnitY));
+        _up = Vector3.NormalizeFast(Vector3.Cross(_direction, right));
+        
+        // ANGLES
+        _pitch = MathF.Asin(_direction.Y);
+        var angle = Vector3.CalculateAngle(Vector3.UnitZ, -_direction);
 
-        if (Input.IsMouseUpNow)
-        {
-            Direction += UpVector * straightAngle;
-            Up -= ForwardVector * straightAngle;
-        }
-        else if (Input.IsMouseDownNow)
-        {
-            Direction -= UpVector * straightAngle;
-            Up += ForwardVector * straightAngle;
-        }
-        if (Input.IsMouseRightNow)
-            Direction += RightVector * sideAngle;
-        else if (Input.IsMouseLeftNow)
-            Direction -= RightVector * sideAngle;
+        if (_direction.X < 0)
+            angle *= -1;
+        
+        _yaw = angle - MathHelper.PiOver2;
     }
 
     public void ToDefault()
     {
         Position = new Vector3(0, 0, 10);
-        Direction = Vector3.NormalizeFast(Vector3.Zero - Position);
-        var right = Vector3.NormalizeFast(Vector3.Cross(new Vector3(0, 1, 0), Direction));
-        Up = Vector3.Cross(Direction, right);
+        _isFirstFrame = true;
+        _lastPos = Vector2.Zero;
+        FocusToWorldCenter();
+        Fov = Constants.FowDefault;
     }
 
-    public override string ToString() => $"Camera.\r\nPos: {Position}\r\nDir: {Direction}\r\nUp: {Up}";
+    public override string ToString() => $"Camera.\r\nPos: {Position}\r\nDir: {_direction}\r\nUp: {_up}";
+
+    private void Update()
+    {
+        var pitchCos = MathF.Cos(_pitch);
+        var x = pitchCos * MathF.Cos(_yaw);
+        var y = MathF.Sin(_pitch);
+        var z = pitchCos * MathF.Sin(_yaw);
+        
+        _direction = Vector3.NormalizeFast(new Vector3(x, y, z));
+        var right = Vector3.NormalizeFast(Vector3.Cross(_direction, -Vector3.UnitY));
+        _up = Vector3.NormalizeFast(Vector3.Cross(_direction, right));
+    }
 }

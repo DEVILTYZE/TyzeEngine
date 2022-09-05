@@ -15,7 +15,6 @@ namespace TyzeEngine;
 internal sealed class TyzeWindow : GameWindow
 {
     private Shader _shader;
-    private Matrix4 _projection;
     private ArrayObject _vectorObject;
     
     // AUDIO
@@ -43,7 +42,7 @@ internal sealed class TyzeWindow : GameWindow
         : base(gameWindowSettings, nativeWindowSettings)
     {
         TriggerLoadObjects += LoadObjects;
-        VSync = VSyncMode.Off;
+        VSync = VSyncMode.On;
 
         // SHOW FPS настройки.
         _title = nativeWindowSettings.Title;
@@ -65,10 +64,9 @@ internal sealed class TyzeWindow : GameWindow
         
         _shader = new Shader(Constants.ShaderVertTexturePath, Constants.ShaderFragTexturePath);
         _shader.Enable();
-
-        var fovy = MathHelper.DegreesToRadians(45);
-        var aspect = Size.X / (float)Size.Y;
-        _projection = Matrix4.CreatePerspectiveFieldOfView(fovy, aspect, .1f, 100);
+        
+        Camera.Instance.Fov = 45;
+        Camera.Instance.AspectRatio = Size.X / (float)Size.Y;
 
         InitializeAudio();
         CurrentScene.Run();
@@ -76,11 +74,14 @@ internal sealed class TyzeWindow : GameWindow
         
         foreach (var script in Scripts)
             script.Prepare();
+        
+        Game.StartFixedExecute();
     }
 
     protected override void OnRenderFrame(FrameEventArgs args)
     {
         base.OnRenderFrame(args);
+        FrameTimeState.RenderTime = (float)args.Time;
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         
         ShowFps(args.Time);
@@ -94,13 +95,13 @@ internal sealed class TyzeWindow : GameWindow
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
         base.OnUpdateFrame(args);
-
+        FrameTimeState.UpdateTime = (float)args.Time;
+        
 #if DEBUG
         if (Input.IsDown(KeyCode.Escape))
             Close();
-        
 #endif
-
+        
         foreach (var script in Scripts)
             script.Execute();
 
@@ -146,38 +147,38 @@ internal sealed class TyzeWindow : GameWindow
         Matrix4 GetMatrix(IGameObject obj)
         {
             if (obj.Body is null)
-                return GetMatrixParametrized(obj.Transformation.Scale, obj.Transformation.Rotation, obj.Transformation.Position);
-            
+                return GetMatrixParametrized(obj.Transform.Scale, obj.Transform.Rotation, obj.Transform.Position);
+
             // SCALE
-            var scale = Matrix4.Identity * Matrix4.CreateScale(obj.Transformation.Scale);
+            var scale = Matrix4.Identity * Matrix4.CreateScale(obj.Transform.Scale);
             
             // ROTATION
             var angularAcceleration = obj.Body.Torque * obj.Body.InverseInertia;
             obj.Body.AngularVelocity += angularAcceleration * time;
-            obj.Transformation.Rotation = Quaternion.FromEulerAngles(obj.Body.AngularVelocity) * time;
-            var rotation = scale * Matrix4.CreateFromQuaternion(obj.Transformation.Rotation);
+            obj.Transform.Rotation += obj.Body.AngularVelocity * time;
+            var rotation = scale * Matrix4.CreateFromQuaternion(Quaternion.FromEulerAngles(obj.Transform.Rotation));
 
             // TRANSLATION
             var acceleration = obj.Body.Force * obj.Body.InverseMass + obj.Body.GravityForce;
             obj.Body.Velocity += acceleration * time;
-            obj.Transformation.Position += obj.Body.Velocity * time;
+            obj.Transform.Position += obj.Body.Velocity * time;
             
-            return rotation * Matrix4.CreateTranslation(obj.Transformation.Position);
+            return rotation * Matrix4.CreateTranslation(obj.Transform.Position);
         }
 
         var objects = new[] { CurrentPlace }.Concat(CurrentPlace.NeighbourPlaces).SelectMany(place => 
             place.GameObjects).ToList();
-        var objectList = objects.Where(obj => obj.Transformation?.Visibility is VisibilityType.Visible).ToList();
+        var objectList = objects.Where(obj => obj.Transform?.Visibility is Visibility.Visible).ToList();
         
         foreach (var obj in objectList)
         {
             obj.ArrayObject.Enable();
-            obj.Transformation.Texture?.Enable();
+            obj.Transform.Texture?.Enable();
             _shader.SetMatrix4("model", GetMatrix(obj));
-            _shader.SetMatrix4("view", Camera.Instance.ViewMatrix);
-            _shader.SetMatrix4("projection", _projection);
+            _shader.SetMatrix4("view", Camera.Instance.View);
+            _shader.SetMatrix4("projection", Camera.Instance.Projection);
             obj.ArrayObject.Draw(PrimitiveType.Triangles, DrawElementsType.UnsignedInt);
-            obj.Transformation.Texture?.Disable();
+            obj.Transform.Texture?.Disable();
             obj.ArrayObject.Disable();
 
             if (obj.Body is null)
@@ -189,7 +190,7 @@ internal sealed class TyzeWindow : GameWindow
 
         objectList = objects.Where(obj => 
             obj.Body is not null && 
-            obj.Transformation.Visibility is not VisibilityType.Collapsed && 
+            obj.Transform.Visibility is not Visibility.Collapsed && 
             obj.Body.IsEnabled).ToList();
         // PhysicsGenerator.DetermineCollision(objectList);
     }
@@ -207,7 +208,7 @@ internal sealed class TyzeWindow : GameWindow
         _time += time;
         ++_frames;
 
-        if (_time < 1.0) 
+        if (_time < Constants.OneSecond) 
             return;
         
         Title = _title + " / FPS: " + _frames;
@@ -236,12 +237,11 @@ internal sealed class TyzeWindow : GameWindow
         var scale = vector / Vector3.One;
         var axis = Vector3.Cross(Vector3.One, vector);
         var angle = Vector3.CalculateAngle(Vector3.One, vector);
-        var rotation = Quaternion.FromAxisAngle(vector, angle);
-        var position = obj.Transformation.Position;
+        var position = obj.Transform.Position;
         _vectorObject.Enable();
-        _shader.SetMatrix4("model", GetMatrixParametrized(scale, rotation, position));
-        _shader.SetMatrix4("view", Camera.Instance.ViewMatrix);
-        _shader.SetMatrix4("projection", _projection);
+        _shader.SetMatrix4("model", GetMatrixParametrized(scale, axis * angle, position));
+        _shader.SetMatrix4("view", Camera.Instance.View);
+        _shader.SetMatrix4("projection", Camera.Instance.Projection);
         _vectorObject.Draw(PrimitiveType.LineLoop);
         _vectorObject.Disable();
     }
@@ -275,10 +275,11 @@ internal sealed class TyzeWindow : GameWindow
         arrayBuffer.Disable();
     }
     
-    private static Matrix4 GetMatrixParametrized(Vector3 scale, Quaternion rotation, Vector3 position)
+    private static Matrix4 GetMatrixParametrized(Vector3 scale, Vector3 rotation, Vector3 position)
     {
         var localScale = Matrix4.Identity * Matrix4.CreateScale(scale);
-        var localRotation = localScale * Matrix4.CreateFromQuaternion(rotation);
+        var localRotation = localScale * Matrix4.CreateFromQuaternion(Quaternion.FromEulerAngles(rotation));
+        
         return localRotation * Matrix4.CreateTranslation(position);
     }
 }

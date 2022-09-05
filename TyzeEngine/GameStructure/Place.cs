@@ -30,7 +30,7 @@ public sealed class Place : IPlace
     }
 
     IEnumerable<UId> IPlace.GetResourceIds() 
-        => from texture in GameObjects.Select(obj => obj.Transformation.Texture) 
+        => from texture in GameObjects.Select(obj => obj.Transform.Texture) 
             where texture is not null 
             select texture.Id;
 

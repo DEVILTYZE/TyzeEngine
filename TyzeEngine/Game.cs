@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using OpenTK.Windowing.Desktop;
 using TyzeEngine.GameStructure;
 using TyzeEngine.Interfaces;
@@ -29,6 +32,20 @@ public static class Game
     private static int _currentSceneIndex;
     private static readonly List<IScript> FrameScripts = new();
     private static readonly IReadOnlyDictionary<GameAssetType, IDictionary> Lists;
+    private static Stopwatch _fixedTime;
+    private static readonly Task FixedExecute = new(() =>
+    {
+        while (_isRunning)
+        {
+            if (_fixedTime.Elapsed.TotalSeconds <= FixedTime) 
+                continue;
+            
+            foreach (var script in FrameScripts)
+                script.FixedExecute();
+            
+            _fixedTime.Restart();
+        }
+    });
 
     internal static IReadOnlyDictionary<string, IScene> Scenes => PrivateScenes;
     internal static IReadOnlyDictionary<string, IPlace> Places => PrivatePlaces;
@@ -37,10 +54,13 @@ public static class Game
     internal static IReadOnlyDictionary<string, ITrigger> Triggers => PrivateTriggers;
     internal static IReadOnlyDictionary<string, IResource> Resources => PrivateResources;
     internal static IReadOnlyDictionary<string, IModel> Models => PrivateModels;
-    
+
+    /// <summary> Режим запуска. Значение по умолчанию — Debug. </summary>
     public static RunMode RunMode { get; set; } = RunMode.Debug;
     public static Saver Saver { get; set; } = new();
+    public static double FixedTime { get; set; } = Constants.FixedTimeLimit;
     
+    /// <summary> Стандартное имя сцены, которая изначально находится в игре. </summary>
     public const string StandardSceneName = "StandardScene";
     public const string StandardPlaceName = "StandardPlace";
 
@@ -64,10 +84,10 @@ public static class Game
     }
 
     /// <summary>
-    /// Метод, производящий запуск окна с игрой, принимая параметрами настройки.
+    /// Запуск окна с игрой.
     /// </summary>
-    /// <param name="gameWindowSettings"></param>
-    /// <param name="nativeWindowSettings"></param>
+    /// <param name="gameWindowSettings">Игровые настройки.</param>
+    /// <param name="nativeWindowSettings">Настройки окна.</param>
     /// <exception cref="Exception">при повторном вызов метода.</exception>
     public static void Run(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings)
     {
@@ -75,17 +95,17 @@ public static class Game
             throw new Exception("Game is already running.");
         
         _isRunning = true;
-        
-        using (var window = new TyzeWindow(gameWindowSettings, nativeWindowSettings))
-        {
-            window.IsDebugMode = RunMode == RunMode.Debug;
-            window.Scenes = PrivateScenes.Select(pair => pair.Value).ToList();
-            window.Scripts = FrameScripts;
-            window.CurrentSceneIndex = _currentSceneIndex;
-            window.Run();
-        }
 
+        using var window = new TyzeWindow(gameWindowSettings, nativeWindowSettings);
+        window.IsDebugMode = RunMode == RunMode.Debug;
+        window.Scenes = PrivateScenes.Select(pair => pair.Value).ToList();
+        window.Scripts = FrameScripts;
+        window.CurrentSceneIndex = _currentSceneIndex;
+        window.Run();
         _isRunning = false;
+
+        if (FixedExecute.Status == TaskStatus.Running)
+            FixedExecute.Wait(100);
     }
 
     #region SaveLoadMethods
@@ -136,7 +156,7 @@ public static class Game
             }
 
             obj.SetModel(PrivateModels.FirstOrDefault(model => model.Value.Id == state.ModelId).Value);
-            obj.Transformation.Texture = PrivateResources.FirstOrDefault(resource => 
+            obj.Transform.Texture = PrivateResources.FirstOrDefault(resource => 
                 resource.Value.Id == state.ResourceId).Value;
             var type = Type.GetType(state.BodyTypeName);
 
@@ -154,12 +174,12 @@ public static class Game
                 continue;
             }
             
-            obj.Transformation.Position = Vector.ToVector3(state.Position);
-            obj.Transformation.Scale = Vector.ToVector3(state.Scale);
-            obj.Transformation.Rotation = Vector.ToQuaternion(state.Rotation);
-            obj.Transformation.Color = Vector.ToVector4(state.Color);
-            obj.Transformation.Visibility = (VisibilityType)state.VisibilityType;
-            obj.Transformation.Visual = (BodyVisualType)state.Visual;
+            obj.Transform.Position = Vector.ToVector3(state.Position);
+            obj.Transform.Scale = Vector.ToVector3(state.Scale);
+            obj.Transform.Rotation = Vector.ToVector3(state.Rotation);
+            obj.Transform.Color = Vector.ToVector4(state.Color);
+            obj.Transform.Visibility = (Visibility)state.VisibilityType;
+            obj.Transform.Visual = (BodyVisualType)state.Visual;
             obj.Body.CollisionLayer = state.CollisionLayer;
             obj.Body.SetMaterial(BytesToMaterial(state.Material));
             obj.Body.Force = Vector.ToVector3(state.Force);
@@ -214,6 +234,11 @@ public static class Game
 
     #region AddMethods
     
+    /// <summary>
+    /// Добавление объекта сцены в игру.
+    /// </summary>
+    /// <param name="name">Уникальное имя.</param>
+    /// <param name="scene">Сцена.</param>
     public static void Add([NotNull] string name, [NotNull] IScene scene)
     {
         TryAddName(name, GameAssetType.Scene);
@@ -235,6 +260,13 @@ public static class Game
         PrivatePlaces.Add(name, place);
     }
     
+    /// <summary>
+    /// Добавление игрового объекта в игру.
+    /// </summary>
+    /// <param name="name">Уникальное имя.</param>
+    /// <param name="obj">Игровой объект.</param>
+    /// <param name="placeName"></param>
+    /// <exception cref="ArgumentException"></exception>
     public static void Add([NotNull] string name, [NotNull] IGameObject obj, [NotNull] string placeName)
     {
         if (!PrivatePlaces.ContainsKey(placeName))
@@ -247,6 +279,12 @@ public static class Game
         LoadQueue.Add(obj);
     }
     
+    /// <summary>
+    /// Добавление скрипта в игру.
+    /// </summary>
+    /// <param name="name">Уникальное имя.</param>
+    /// <param name="script">Скрипт.</param>
+    /// <param name="isFrameDependent">Истина, если скрипт должен выполняться в цикле, иначе скрипт будет выполняться вручную.</param>
     public static void Add([NotNull] string name, [NotNull] IScript script, bool isFrameDependent = true)
     {
         TryAddName(name, GameAssetType.Script);
@@ -258,6 +296,11 @@ public static class Game
         PrivateScripts.Add(name, script);
     }
 
+    /// <summary>
+    /// Добавление триггера в игру.
+    /// </summary>
+    /// <param name="name">Уникальное имя.</param>
+    /// <param name="trigger">Триггер.</param>
     public static void Add([NotNull] string name, [NotNull] ITrigger trigger)
     {
         TryAddName(name, GameAssetType.Trigger);
@@ -265,6 +308,12 @@ public static class Game
         PrivateTriggers.Add(name, trigger);
     }
 
+    /// <summary>
+    /// Добавление ресурса в игру.
+    /// </summary>
+    /// <param name="name">Уникальное имя.</param>
+    /// <param name="resource">Ресурс.</param>
+    /// <exception cref="ArgumentException">Ресурс с таким же путём до файла уже существует.</exception>
     public static void Add([NotNull] string name, [NotNull] IResource resource)
     {
         if (PrivateResources.Select(pair => pair.Value.Path).Any(path => string.CompareOrdinal(path, resource.Path) == 0))
@@ -275,6 +324,11 @@ public static class Game
         PrivateResources.Add(name, resource);
     }
 
+    /// <summary>
+    /// Добавление модели в игру.
+    /// </summary>
+    /// <param name="name">Уникальное имя.</param>
+    /// <param name="model">Модель.</param>
     public static void Add([NotNull] string name, [NotNull] IModel model)
     {
         TryAddName(name, GameAssetType.Model);
@@ -286,6 +340,10 @@ public static class Game
 
     #region RemoveMethods
 
+    /// <summary>
+    /// Удаление любого объекта из игры по имени.
+    /// </summary>
+    /// <param name="name">Уникальное имя объекта.</param>
     public static void Remove([NotNull] string name)
     {
         if (!Names.ContainsKey(name))
@@ -308,6 +366,10 @@ public static class Game
         Lists[type].Remove(name);
     }
 
+    /// <summary>
+    /// Удаление любого объекта из игры по UID.
+    /// </summary>
+    /// <param name="id">UID объекта.</param>
     public static void Remove(UId id)
     {
         if (!UIds.ContainsKey(id))
@@ -342,6 +404,14 @@ public static class Game
     }
 
     #endregion
+
+    internal static void StartFixedExecute()
+    {
+        Thread.Sleep(50);
+        
+        _fixedTime = Stopwatch.StartNew();
+        FixedExecute.Start();
+    }
 
     private static void TryAddUId(IUIdObject obj, GameAssetType type)
     {

@@ -5,11 +5,16 @@ namespace TyzeEngine.Interfaces;
 public interface ICamera
 {
     Vector3 Position { get; set; }
-    Vector3 Direction { get; set; }
-    Vector3 Up { get; set; }
-    Matrix4 ViewMatrix { get; }
+    bool IsInverted { get; set; }
+    float AspectRatio { get; set; }
+    Matrix4 View { get; }
+    Matrix4 Projection { get; }
+    float Pitch { get; set; }
+    float Yaw { get; set; }
+    float Fov { get; set; }
 
-    void Rotate(Vector3 eulerAngles);
-    void ControlDefault(float speed, float straightAngle, float sideAngle);
+    void Move(float speed, float time);
+    void Rotate(float sensitivity, float time);
+    void FocusToWorldCenter();
     void ToDefault();
 }

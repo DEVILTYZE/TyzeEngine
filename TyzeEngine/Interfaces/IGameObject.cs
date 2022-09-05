@@ -10,7 +10,7 @@ public interface IGameObject : IDisposable, IDeepCloneable<IGameObject>, IUIdObj
     
     IModel Model { get; }
     IBody Body { get; set; }
-    ITransformation Transformation { get; }
+    ITransform Transform { get; }
     bool SaveStatus { get; set; }
     
     internal void SetModel(IModel model);

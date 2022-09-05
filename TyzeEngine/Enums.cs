@@ -11,7 +11,7 @@ public enum ArrayType
     FourDimensions = 4,
 }
 
-public enum VisibilityType
+public enum Visibility
 {
     Visible = 0,
     Hidden = 1,

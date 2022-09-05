@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Physics;
@@ -8,8 +7,6 @@ namespace TyzeEngine.Objects;
 
 public abstract class Body : IBody
 {
-    private Vector3 _angularVelocity;
-
     public ushort CollisionLayer { get; set; }
     public IMaterial Material { get; private set; }
     public float Mass { get; private set; }
@@ -19,11 +16,7 @@ public abstract class Body : IBody
     public Vector3 Centroid { get; set; } = Vector3.Zero;
     public Vector3 Torque { get; set; } = Vector3.Zero;
     public Vector3 Velocity { get; set; } = Vector3.Zero;
-    public Vector3 AngularVelocity
-    {
-        get => _angularVelocity;
-        set => _angularVelocity = new Vector3(value.X % MathF.Tau, value.Y % MathF.Tau, value.Z % MathF.Tau);
-    }
+    public Vector3 AngularVelocity { get; set; }
     public Vector3 Force { get; set; }
     public Vector3 GravityForce { get; set; }
     public bool IsEnabled { get; set; }

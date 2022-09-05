@@ -25,7 +25,7 @@ public class VectorArray : IVectorArray
 
     public void Add(float x)
     {
-        if (Type != ArrayType.Unknown) 
+        if (Type is not ArrayType.Unknown and not ArrayType.OneDimension) 
             return;
         
         Type = ArrayType.OneDimension;
@@ -34,7 +34,7 @@ public class VectorArray : IVectorArray
 
     public void Add(float x, float y)
     {
-        if (Type != ArrayType.Unknown) 
+        if (Type is not ArrayType.Unknown and not ArrayType.TwoDimensions) 
             return;
         
         Type = ArrayType.TwoDimensions;
@@ -43,7 +43,7 @@ public class VectorArray : IVectorArray
 
     public void Add(float x, float y, float z)
     {
-        if (Type != ArrayType.Unknown) 
+        if (Type is not ArrayType.Unknown and not ArrayType.ThreeDimensions) 
             return;
         
         Type = ArrayType.ThreeDimensions;
@@ -52,7 +52,7 @@ public class VectorArray : IVectorArray
 
     public void Add(float x, float y, float z, float w)
     {
-        if (Type != ArrayType.Unknown) 
+        if (Type is not ArrayType.Unknown and not ArrayType.FourDimensions) 
             return;
         
         Type = ArrayType.FourDimensions;

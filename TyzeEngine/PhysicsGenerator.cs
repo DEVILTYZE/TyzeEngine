@@ -111,8 +111,8 @@ public static class PhysicsGenerator
         
         lock (CollisionLocker)
         {
-            args.ObjectA.Transformation.Position += correction1;
-            args.ObjectB.Transformation.Position += correction2;
+            args.ObjectA.Transform.Position += correction1;
+            args.ObjectB.Transform.Position += correction2;
         }
     }
     
@@ -286,7 +286,7 @@ public static class PhysicsGenerator
         var args = new CollisionEventArgs(objectA, objectB);
         var cirBodyA = (EllipseBody)objectA.Body;
         var cirBodyB = (EllipseBody)objectB.Body;
-        var n = objectA.Transformation.Position - objectA.Transformation.Position;
+        var n = objectA.Transform.Position - objectA.Transform.Position;
         var r = cirBodyA.Radius + cirBodyB.Radius;
         r *= r;
         var distance = n.LengthSquared;

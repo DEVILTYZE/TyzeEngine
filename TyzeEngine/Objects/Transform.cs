@@ -4,7 +4,7 @@ using TyzeEngine.Resources;
 
 namespace TyzeEngine.Objects;
 
-public class Transformation : ITransformation
+public class Transform : ITransform
 {
     private Vector3 _scale;
     
@@ -24,14 +24,14 @@ public class Transformation : ITransformation
             //((Body)Body).RecomputeBodyParameters(divide);
         }
     }
-    public Quaternion Rotation { get; set; }
-    public Matrix3 RotationMatrix => Matrix3.CreateFromQuaternion(Rotation);
+    public Vector3 Rotation { get; set; }
+    public Matrix3 RotationMatrix => Matrix3.CreateFromQuaternion(Quaternion.FromEulerAngles(Rotation));
     public Vector4 Color { get; set; } = Constants.DefaultColor;
     public IResource Texture { get; set; }
-    public VisibilityType Visibility { get; set; } = VisibilityType.Visible;
+    public Visibility Visibility { get; set; } = Visibility.Visible;
     public BodyVisualType Visual { get; set; } = BodyVisualType.Color;
 
-    public Transformation()
+    public Transform()
     {
         Scale = Constants.DefaultSize2D;
         Rotation = Constants.DefaultRotation;
@@ -44,7 +44,7 @@ public class Transformation : ITransformation
         (float)a / byte.MaxValue
     );
     
-    public ITransformation Clone() => new Transformation
+    public ITransform Clone() => new Transform
     {
         Position = Position,
         _scale = Scale,

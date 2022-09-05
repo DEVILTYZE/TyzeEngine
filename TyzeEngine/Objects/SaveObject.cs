@@ -67,14 +67,14 @@ public struct SaveObjectState : ISaveable
     {
         Id = obj.Id;
         ModelId = obj.Model.Id;
-        ResourceId = obj.Transformation.Texture.Id;
+        ResourceId = obj.Transform.Texture.Id;
         BodyTypeName = obj.Body.GetType().FullName;
-        Position = Vector.ToBytes(obj.Transformation.Position);
-        Scale = Vector.ToBytes(obj.Transformation.Scale);
-        Rotation = Vector.ToBytes(obj.Transformation.Rotation);
-        Color = Vector.ToBytes(obj.Transformation.Color);
-        VisibilityType = (int)obj.Transformation.Visibility;
-        Visual = (int)obj.Transformation.Visual;
+        Position = Vector.ToBytes(obj.Transform.Position);
+        Scale = Vector.ToBytes(obj.Transform.Scale);
+        Rotation = Vector.ToBytes(obj.Transform.Rotation);
+        Color = Vector.ToBytes(obj.Transform.Color);
+        VisibilityType = (int)obj.Transform.Visibility;
+        Visual = (int)obj.Transform.Visual;
         CollisionLayer = obj.Body.CollisionLayer;
         Material = MaterialToBytes(obj.Body.Material);
         Force = Vector.ToBytes(obj.Body.Force);

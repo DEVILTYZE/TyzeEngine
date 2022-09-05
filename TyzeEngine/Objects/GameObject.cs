@@ -28,29 +28,29 @@ public abstract class GameObject : IGameObject
     public UId Id { get; set; } = new();
     public IModel Model { get; private set; }
     public IBody Body { get; set; }
-    public ITransformation Transformation { get; private set; }
+    public ITransform Transform { get; private set; }
     public bool SaveStatus { get; set; }
 
     protected GameObject(IModel model)
     {
         Model = model;
-        Transformation = new Transformation();
+        Transform = new Transform();
     }
 
     ~GameObject() => Dispose(false);
 
     public override string ToString()
         => $"object: {Id}\r\n" +
-           string.Join(' ', Transformation.Position) + "\r\n" +
-           string.Join(' ', Transformation.Scale) + "\r\n" +
-           string.Join(' ', Transformation.Rotation) + "\r\n" +
-           string.Join(' ', Transformation.Color);
+           string.Join(' ', Transform.Position) + "\r\n" +
+           string.Join(' ', Transform.Scale) + "\r\n" +
+           string.Join(' ', Transform.Rotation) + "\r\n" +
+           string.Join(' ', Transform.Color);
     
     public IGameObject Clone()
     {
         var obj = DeepClone();
         obj.Body = Body?.Clone();
-        obj.Transformation = Transformation.Clone();
+        obj.Transform = Transform.Clone();
         obj.Model = Model;
         obj.SaveStatus = SaveStatus;
 
@@ -98,7 +98,7 @@ public abstract class GameObject : IGameObject
         arrayObject.Disable();
         
         // Связывание ресурсов для текущего объекта.
-        Transformation.Texture?.Enable(); // А нахуя? А я уже не помню.
+        Transform.Texture?.Enable(); // А нахуя? А я уже не помню.
     }
 
     public void Dispose()
@@ -131,7 +131,7 @@ public abstract class GameObject : IGameObject
         if (disposing)
         {
             Body = null;
-            Transformation = null;
+            Transform = null;
         }
 
         ReleaseUnmanagedResources();

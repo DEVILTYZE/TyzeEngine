@@ -22,6 +22,10 @@ internal static class Constants
     internal const string SaveExtension = ".sav";
     
     // DEFAULT VALUES
+    internal const double FixedTimeLimit = .02;
+    internal const float YawDefault = -45;
+    internal const float FowDefault = 45;
+    internal const float OneSecond = 1;
     internal const int DefaultDelay = 25;
     internal const int ErrorCode = -1;
     internal const int Vector2Length = 2;
@@ -34,7 +38,7 @@ internal static class Constants
     internal static readonly Vector3 DefaultPosition = new(0, 0, 0);
     internal static readonly Vector3 DefaultSize = new(1, 1, 1);
     internal static readonly Vector3 DefaultSize2D = new(1, 1, 0);
-    internal static readonly Quaternion DefaultRotation = new(0, 0, 0);
+    internal static readonly Vector3 DefaultRotation = Vector3.Zero;
     internal static readonly Vector4 DefaultColor = new(.5f, .5f, .5f, 1);
     internal static readonly Vector4 NullColor = new(0, 0, 0, 0);
     
