@@ -1,18 +1,18 @@
 ﻿using System;
-using OpenTK.Graphics.OpenGL4;
+using System.Collections.Generic;
 
 namespace TyzeEngine.Interfaces;
 
-public interface IGameObject : IDisposable, IDeepCloneable<IGameObject>, IUIdObject
+public interface IGameObject : IDisposable, IDeepCloneable<IGameObject>, IGameResource
 {
-    internal ArrayObject ArrayObject { get; set; }
-    internal BufferUsageHint DrawType { get; }
+    internal string SpaceName { get; set; }
     
-    IModel Model { get; }
+    IModel Model { get; set; }
     IBody Body { get; set; }
     ITransform Transform { get; }
+    IVisual Visual { get; }
     bool SaveStatus { get; set; }
-    
-    internal void SetModel(IModel model);
-    internal void Load(Shader shader);
+
+    internal void Load();
+    internal void Draw(IEnumerable<IGameObject> lights);
 }

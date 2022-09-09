@@ -7,8 +7,7 @@ public abstract class ComplexObject : GameObject, IComplexObject
 {
     public List<IGameObject> GameObjects { get; }
 
-    protected ComplexObject(IModel model, List<IGameObject> objects) 
-        : base(model)
+    protected ComplexObject(List<IGameObject> objects)
     {
         GameObjects = objects;
     }

@@ -34,11 +34,6 @@ internal static class Vector
         
         return new Quaternion(floats[0], floats[1], floats[2], floats[3]);
     }
-
-    // internal static Quaternion ToQuaternion(Vector3 vector)
-    // {
-    //     
-    // }
     
     internal static byte[] ToBytes(Vector2 vector)
     {
@@ -95,12 +90,4 @@ internal static class Vector
     internal static IEnumerable<float> ToFloats(Vector3 vector) => new[] { vector.X, vector.Y, vector.Z };
 
     internal static IEnumerable<float> ToFloats(Vector4 vector) => new[] { vector.X, vector.Y, vector.Z, vector.W };
-
-    internal static Vector3 Abs(Vector3 vector)
-    {
-        for (var i = 0; i < 3; ++i)
-            vector[i] = MathF.Abs(vector[i]);
-
-        return vector;
-    }
 }

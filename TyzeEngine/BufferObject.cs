@@ -6,15 +6,15 @@ namespace TyzeEngine;
 
 internal sealed class BufferObject : IDisposable
 {
-    private readonly BufferTarget _type;
     private bool _disposed;
     
     internal int Handle { get; }
     internal bool IsEnabled { get; private set; }
+    internal BufferTarget Type { get; }
 
     internal BufferObject(BufferTarget type)
     {
-        _type = type;
+        Type = type;
         Handle = GL.GenBuffer();
         IsEnabled = false;
     }
@@ -27,19 +27,19 @@ internal sealed class BufferObject : IDisposable
             throw new ArgumentException("Data is null or empty.", nameof(data));
 
         Enable();
-        GL.BufferData(_type, data.Length * Marshal.SizeOf(typeof(T)), data, hint);
+        GL.BufferData(Type, data.Length * Marshal.SizeOf(typeof(T)), data, hint);
         Disable();
     }
 
     internal void Enable()
     {
-        GL.BindBuffer(_type, Handle);
+        GL.BindBuffer(Type, Handle);
         IsEnabled = true;
     }
 
     internal void Disable()
     {
-        GL.BindBuffer(_type, 0);
+        GL.BindBuffer(Type, 0);
         IsEnabled = false;
     }
 

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
-using TyzeEngine.Physics;
+using TyzeEngine.Materials;
 
 namespace TyzeEngine.Objects;
 

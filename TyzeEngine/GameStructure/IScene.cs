@@ -6,13 +6,12 @@ using TyzeEngine.Resources;
 
 namespace TyzeEngine.GameStructure;
 
-public interface IScene : IDisposable, IUIdObject
+public interface IScene : IDisposable, IGameResource
 {
     internal Task LoadingPlacesTask { get; }
     
     bool LoadError { get; }
-    ILighting Lighting { get; }
-    IPlace CurrentPlace { get; set; }
+    ISpace CurrentPlace { get; set; }
     SortedList<UId, IResource> Resources { get; }
     SortedList<UId, IModel> Models { get; }
     TriggerHandler ReloadObjects { get; set; }

@@ -26,14 +26,13 @@ public sealed class Scene : IScene
         }
         private init => _loadError = value;
     }
-    public ILighting Lighting { get; }
-    public IPlace CurrentPlace { get; set; }
+    public ISpace CurrentPlace { get; set; }
     public SortedList<UId, IResource> Resources { get; } = new();
     public SortedList<UId, IModel> Models { get; } = new();
     public TriggerHandler ReloadObjects { get; set; }
     public TriggerHandler LoadSceneHandler { get; set; }
     
-    public Scene(IPlace spawnPlace)
+    public Scene(ISpace spawnPlace)
     {
         CurrentPlace = spawnPlace;
         LoadError = false;
@@ -80,21 +79,28 @@ public sealed class Scene : IScene
         GC.SuppressFinalize(this);
     }
 
-    public static IScene FindOrDefault(string name)
+    void IGameResource.Remove()
+    {
+    }
+
+    public static IScene Find(string name)
     {
         var isFound = Game.Scenes.TryGetValue(name, out var value);
 
-        return isFound ? value : null;
+        if (isFound)
+            return value;
+
+        throw new Exception("Scene not found.");
     }
 
     private void LoadPlace(object obj)
     {
         var id = (UId)obj;
-        IPlace place = null;
+        ISpace place = null;
 
         if (CurrentPlace.Id != id)
         {
-            foreach (var neighbourPlace in CurrentPlace.NeighbourPlaces)
+            foreach (var neighbourPlace in CurrentPlace.NeighbourSpaces)
             {
                 if (neighbourPlace.Id != id)
                 {
@@ -116,7 +122,7 @@ public sealed class Scene : IScene
 
         var resourceIds = new HashSet<UId>(place.GetResourceIds());
 
-        foreach (var neighbourPlace in place.NeighbourPlaces)
+        foreach (var neighbourPlace in place.NeighbourSpaces)
         {
             if (neighbourPlace.Loaded)
                 continue;
@@ -128,7 +134,7 @@ public sealed class Scene : IScene
         LoadResources(resourceIds);
         place.Loaded = true;
 
-        foreach (var neighbourPlace in place.NeighbourPlaces)
+        foreach (var neighbourPlace in place.NeighbourSpaces)
             neighbourPlace.Loaded = true;
     }
     
@@ -143,7 +149,7 @@ public sealed class Scene : IScene
         if (_disposed)
             return;
         
-        var places = new[] { CurrentPlace }.Concat(CurrentPlace.NeighbourPlaces);
+        var places = new[] { CurrentPlace }.Concat(CurrentPlace.NeighbourSpaces);
 
         foreach (var place in places)
             place?.Dispose();

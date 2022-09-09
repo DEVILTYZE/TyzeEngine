@@ -13,15 +13,17 @@ public class Sphere : Model
     {
     }
     
-    private static (List<Vector3>, uint[], IVectorArray) GetModel(float radius, int sectorCount, int stackCount)
+    private static (List<Vector3>, List<Vector3>, IVectorArray, List<uint>) GetModel(float radius, int sectorCount, int stackCount)
     {
         var vertices = new List<Vector3>();
         var indices = new List<uint>();
         // var lineIndices = new List<uint>();
         var texture = new VectorArray();
+        var normals = new List<Vector3>();
 
         var sectorStep = MathF.Tau / sectorCount;
         var stackStep = MathF.PI / stackCount;
+        var length = 1 / radius;
 
         for (var i = 0; i <= stackCount; ++i)
         {
@@ -35,6 +37,7 @@ public class Sphere : Model
                 var x = xy * MathF.Cos(sectorAngle);
                 var y = xy * MathF.Sin(sectorAngle);
                 vertices.Add(new Vector3(x, y, z));
+                normals.Add(new Vector3(x * length, y * length, z * length));
                 texture.Add(j / (float)sectorCount, i / (float)stackCount);
             }
         }
@@ -60,6 +63,6 @@ public class Sphere : Model
             }
         }
 
-        return (vertices, indices.ToArray(), texture);
+        return (vertices, normals, texture, indices);
     }
 }

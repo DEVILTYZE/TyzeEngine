@@ -6,11 +6,12 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using OpenTK.Mathematics;
 using OpenTK.Windowing.Desktop;
 using TyzeEngine.GameStructure;
 using TyzeEngine.Interfaces;
+using TyzeEngine.Materials;
 using TyzeEngine.Objects;
-using TyzeEngine.Physics;
 using TyzeEngine.Resources;
 
 namespace TyzeEngine;
@@ -22,20 +23,19 @@ public static class Game
     private static readonly Dictionary<UId, GameAssetType> UIds = new();
     private static readonly Dictionary<string, GameAssetType> Names = new();
     private static readonly SortedList<string, IScene> PrivateScenes = new();
-    private static readonly SortedList<string, IPlace> PrivatePlaces = new();
+    private static readonly SortedList<string, ISpace> PrivateSpaces = new();
     private static readonly SortedList<string, IGameObject> Objects = new();
     private static readonly SortedList<string, IScript> PrivateScripts = new();
     private static readonly SortedList<string, ITrigger> PrivateTriggers = new();
     private static readonly SortedList<string, IResource> PrivateResources = new();
     private static readonly SortedList<string, IModel> PrivateModels = new();
-    private static bool _isRunning;
+    private static readonly SortedList<string, IMaterial> PrivateMaterials = new();
     private static int _currentSceneIndex;
-    private static readonly List<IScript> FrameScripts = new();
     private static readonly IReadOnlyDictionary<GameAssetType, IDictionary> Lists;
     private static Stopwatch _fixedTime;
     private static readonly Task FixedExecute = new(() =>
     {
-        while (_isRunning)
+        while (IsRunning)
         {
             if (_fixedTime.Elapsed.TotalSeconds <= FixedTime) 
                 continue;
@@ -48,21 +48,25 @@ public static class Game
     });
 
     internal static IReadOnlyDictionary<string, IScene> Scenes => PrivateScenes;
-    internal static IReadOnlyDictionary<string, IPlace> Places => PrivatePlaces;
+    internal static IReadOnlyDictionary<string, ISpace> Spaces => PrivateSpaces;
     internal static IReadOnlyDictionary<string, IGameObject> GameObjects => Objects;
     internal static IReadOnlyDictionary<string, IScript> Scripts => PrivateScripts;
     internal static IReadOnlyDictionary<string, ITrigger> Triggers => PrivateTriggers;
     internal static IReadOnlyDictionary<string, IResource> Resources => PrivateResources;
     internal static IReadOnlyDictionary<string, IModel> Models => PrivateModels;
+    internal static IReadOnlyDictionary<string, IMaterial> Materials => PrivateMaterials;
+    internal static readonly List<IScript> FrameScripts = new();
+    internal static readonly SortedList<BodyVisualType, Shader> Shaders = new();
 
     /// <summary> Режим запуска. Значение по умолчанию — Debug. </summary>
     public static RunMode RunMode { get; set; } = RunMode.Debug;
     public static Saver Saver { get; set; } = new();
     public static double FixedTime { get; set; } = Constants.FixedTimeLimit;
+    public static bool IsRunning { get; private set; }
     
     /// <summary> Стандартное имя сцены, которая изначально находится в игре. </summary>
     public const string StandardSceneName = "StandardScene";
-    public const string StandardPlaceName = "StandardPlace";
+    public const string StandardSpaceName = "StandardPlace";
 
     #endregion
 
@@ -71,38 +75,38 @@ public static class Game
         Lists = new SortedList<GameAssetType, IDictionary>
         {
             { GameAssetType.Scene, PrivateScenes },
-            { GameAssetType.Place, PrivatePlaces },
+            { GameAssetType.Space, PrivateSpaces },
             { GameAssetType.GameObject, Objects },
             { GameAssetType.Script, PrivateScripts },
             { GameAssetType.Trigger, PrivateTriggers },
             { GameAssetType.Resource, PrivateResources },
-            { GameAssetType.Model, PrivateModels }
+            { GameAssetType.Model, PrivateModels },
+            { GameAssetType.Material, PrivateMaterials }
         };
-        var place = new Place();
-        Add(StandardSceneName, new Scene(place));
-        Add(StandardPlaceName, place, StandardSceneName);
+        var space = new Space();
+        Add(StandardSceneName, new Scene(space));
+        Add(StandardSpaceName, space, StandardSceneName);
     }
 
     /// <summary>
     /// Запуск окна с игрой.
     /// </summary>
-    /// <param name="gameWindowSettings">Игровые настройки.</param>
     /// <param name="nativeWindowSettings">Настройки окна.</param>
     /// <exception cref="Exception">при повторном вызов метода.</exception>
-    public static void Run(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings)
+    public static void Run(NativeWindowSettings nativeWindowSettings)
     {
-        if (_isRunning)
+        if (IsRunning)
             throw new Exception("Game is already running.");
         
-        _isRunning = true;
-
+        IsRunning = true;
+        var gameWindowSettings = new GameWindowSettings { RenderFrequency = 144, UpdateFrequency = 144 };
         using var window = new TyzeWindow(gameWindowSettings, nativeWindowSettings);
         window.IsDebugMode = RunMode == RunMode.Debug;
         window.Scenes = PrivateScenes.Select(pair => pair.Value).ToList();
         window.Scripts = FrameScripts;
         window.CurrentSceneIndex = _currentSceneIndex;
         window.Run();
-        _isRunning = false;
+        IsRunning = false;
 
         if (FixedExecute.Status == TaskStatus.Running)
             FixedExecute.Wait(100);
@@ -112,12 +116,12 @@ public static class Game
     
     public static void Save(string fileName)
     {
-        if (PrivateScenes.Count == 0 || PrivatePlaces.Count == 0 || Objects.Count == 0)
+        if (PrivateScenes.Count == 0 || PrivateSpaces.Count == 0 || Objects.Count == 0)
             return;
 
-        var saveObject = new SaveObject(_currentSceneIndex, PrivatePlaces.Count, Objects.Count);
+        var saveObject = new SaveObject(_currentSceneIndex, PrivateSpaces.Count, Objects.Count);
 
-        foreach (var (_, place) in PrivatePlaces)
+        foreach (var (_, place) in PrivateSpaces)
             saveObject.AddPlaceObjects(place);
 
         foreach (var (_, obj) in Objects.Where(localObj => localObj.Value.SaveStatus))
@@ -129,13 +133,6 @@ public static class Game
 
     public static bool Load(string fileName)
     {
-        IMaterial BytesToMaterial(byte[] data)
-        {
-            var floats = Vector.ToFloats(data, 4).ToArray();
-            
-            return new Material(floats[0], floats[1], floats[2], floats[3]);
-        }
-
         var withErrors = false;
         var bytes = Saver.Load(fileName);
         var saveObject = SaveObject.GetByBytes(bytes);
@@ -143,6 +140,9 @@ public static class Game
         
         foreach (var (_, obj) in Objects)
         {
+            if (!obj.SaveStatus)
+                continue;
+            
             SaveObjectState state;
 
             try
@@ -155,8 +155,8 @@ public static class Game
                 continue;
             }
 
-            obj.SetModel(PrivateModels.FirstOrDefault(model => model.Value.Id == state.ModelId).Value);
-            obj.Transform.Texture = PrivateResources.FirstOrDefault(resource => 
+            obj.Model = PrivateModels.FirstOrDefault(model => model.Value.Id == state.ModelId).Value;
+            obj.Visual.Texture = PrivateResources.FirstOrDefault(resource => 
                 resource.Value.Id == state.ResourceId).Value;
             var type = Type.GetType(state.BodyTypeName);
 
@@ -177,23 +177,23 @@ public static class Game
             obj.Transform.Position = Vector.ToVector3(state.Position);
             obj.Transform.Scale = Vector.ToVector3(state.Scale);
             obj.Transform.Rotation = Vector.ToVector3(state.Rotation);
-            obj.Transform.Color = Vector.ToVector4(state.Color);
-            obj.Transform.Visibility = (Visibility)state.VisibilityType;
-            obj.Transform.Visual = (BodyVisualType)state.Visual;
+            obj.Visual.Color = Color4.FromXyz(Vector.ToVector4(state.Color));
+            obj.Visual.Visibility = (Visibility)state.VisibilityType;
+            obj.Visual.Type = (BodyVisualType)state.Visual;
             obj.Body.CollisionLayer = state.CollisionLayer;
-            obj.Body.SetMaterial(BytesToMaterial(state.Material));
+            //obj.Body.SetMaterial(BytesToMaterial(state.Material));
             obj.Body.Force = Vector.ToVector3(state.Force);
             obj.Body.GravityForce = Vector.ToVector3(state.GravityForce);
             obj.Body.IsEnabled = state.IsEnabled;
         }
         
-        foreach (var (_, place) in PrivatePlaces)
+        foreach (var (_, place) in PrivateSpaces)
         {
             var index = -1;
             
-            for (var i = 0; i < saveObject.PlaceIds.Length; ++i)
+            for (var i = 0; i < saveObject.SpaceIds.Length; ++i)
             {
-                if (saveObject.PlaceIds[i] != place.Id) 
+                if (saveObject.SpaceIds[i] != place.Id) 
                     continue;
                 
                 index = i;
@@ -206,7 +206,7 @@ public static class Game
                 continue;
             }
 
-            foreach (var id in saveObject.PlaceObjects[index])
+            foreach (var id in saveObject.SpaceObjects[index])
             {
                 if (place.GameObjects.Any(obj => obj.Id == id))
                     continue;
@@ -246,18 +246,26 @@ public static class Game
         PrivateScenes.Add(name, scene);
     }
 
-    public static void Add([NotNull] string name, [NotNull] IPlace place, string sceneOrPlaceName)
+    /// <summary>
+    /// Добавление объекта пространства в игру.
+    /// </summary>
+    /// <param name="name">Уникальное имя.</param>
+    /// <param name="space">Пространство.</param>
+    /// <param name="sceneOrSpaceName">Имя сцены или пространства, к которому должно быть привязано новое пространство.</param>
+    /// <exception cref="ArgumentException">Не существует сцены или пространства, к которому будет привязано новое пространство.</exception>
+    public static void Add([NotNull] string name, [NotNull] ISpace space, string sceneOrSpaceName)
     {
-        if (PrivatePlaces.ContainsKey(sceneOrPlaceName))
-            PrivatePlaces[sceneOrPlaceName].NeighbourPlaces.Add(place);
-        else if (PrivateScenes.ContainsKey(sceneOrPlaceName))
-            PrivateScenes[sceneOrPlaceName].CurrentPlace = place;
+        if (PrivateSpaces.ContainsKey(sceneOrSpaceName))
+            PrivateSpaces[sceneOrSpaceName].NeighbourSpaces.Add(space);
+        else if (PrivateScenes.ContainsKey(sceneOrSpaceName))
+            PrivateScenes[sceneOrSpaceName].CurrentPlace = space;
         else
-            throw new ArgumentException("Scene or place with this name doesn't exists.", nameof(sceneOrPlaceName));
+            throw new ArgumentException("Scene or space with this name doesn't exists.", nameof(sceneOrSpaceName));
         
-        TryAddName(name, GameAssetType.Place);
-        TryAddUId(place, GameAssetType.Place);
-        PrivatePlaces.Add(name, place);
+        TryAddName(name, GameAssetType.Space);
+        TryAddUId(space, GameAssetType.Space);
+        PrivateSpaces.Add(name, space);
+        space.SceneOrSpaceName = sceneOrSpaceName;
     }
     
     /// <summary>
@@ -265,22 +273,23 @@ public static class Game
     /// </summary>
     /// <param name="name">Уникальное имя.</param>
     /// <param name="obj">Игровой объект.</param>
-    /// <param name="placeName"></param>
-    /// <exception cref="ArgumentException"></exception>
-    public static void Add([NotNull] string name, [NotNull] IGameObject obj, [NotNull] string placeName)
+    /// <param name="spaceName">Имя пространства, к которому будет привязан новый объект.</param>
+    /// <exception cref="ArgumentException">Не существует пространства, к которому будет привязан новый объект.</exception>
+    public static void Add([NotNull] string name, [NotNull] IGameObject obj, [NotNull] string spaceName)
     {
-        if (!PrivatePlaces.ContainsKey(placeName))
-            throw new ArgumentException("Place with this name doesn't exists.", nameof(placeName));
+        if (!PrivateSpaces.ContainsKey(spaceName))
+            throw new ArgumentException("Space with this name doesn't exists.", nameof(spaceName));
         
         TryAddName(name, GameAssetType.GameObject);
         TryAddUId(obj, GameAssetType.GameObject);
-        PrivatePlaces[placeName].GameObjects.Add(obj);
+        PrivateSpaces[spaceName].GameObjects.Add(obj);
+        obj.SpaceName = spaceName;
         Objects.Add(name, obj);
         LoadQueue.Add(obj);
     }
     
     /// <summary>
-    /// Добавление скрипта в игру.
+    /// Добавление объекта скрипта в игру.
     /// </summary>
     /// <param name="name">Уникальное имя.</param>
     /// <param name="script">Скрипт.</param>
@@ -297,7 +306,7 @@ public static class Game
     }
 
     /// <summary>
-    /// Добавление триггера в игру.
+    /// Добавление объекта триггера в игру.
     /// </summary>
     /// <param name="name">Уникальное имя.</param>
     /// <param name="trigger">Триггер.</param>
@@ -309,7 +318,7 @@ public static class Game
     }
 
     /// <summary>
-    /// Добавление ресурса в игру.
+    /// Добавление объекта ресурса в игру.
     /// </summary>
     /// <param name="name">Уникальное имя.</param>
     /// <param name="resource">Ресурс.</param>
@@ -325,7 +334,7 @@ public static class Game
     }
 
     /// <summary>
-    /// Добавление модели в игру.
+    /// Добавление объекта модели в игру.
     /// </summary>
     /// <param name="name">Уникальное имя.</param>
     /// <param name="model">Модель.</param>
@@ -334,6 +343,18 @@ public static class Game
         TryAddName(name, GameAssetType.Model);
         TryAddUId(model, GameAssetType.Model);
         PrivateModels.Add(name, model);
+    }
+
+    /// <summary>
+    /// Добавление объекта материала в игру.
+    /// </summary>
+    /// <param name="name">Уникальное имя.</param>
+    /// <param name="material">Материал.</param>
+    public static void Add([NotNull] string name, [NotNull] IMaterial material)
+    {
+        TryAddName(name, GameAssetType.Model);
+        TryAddUId(material, GameAssetType.Model);
+        PrivateMaterials.Add(name, material);
     }
 
     #endregion
@@ -351,17 +372,12 @@ public static class Game
         
         var type = Names[name];
         Names.Remove(name);
-        var obj = (IUIdObject)Lists[type][name];
-        
-        switch (obj)
-        {
-            case null:
-                return;
-            case IScript script:
-                FrameScripts.Remove(script);
-                break;
-        }
+        var obj = (IGameResource)Lists[type][name];
 
+        if (obj is null)
+            throw new NullReferenceException("Object was null.");
+        
+        obj.Remove();
         UIds.Remove(obj.Id);
         Lists[type].Remove(name);
     }
@@ -377,29 +393,25 @@ public static class Game
         
         var type = UIds[id];
         UIds.Remove(id);
+        IGameResource gameResource = null;
         var name = string.Empty;
-        var obj = new object();
 
         foreach (DictionaryEntry entry in Lists[type])
         {
-            var idObj = (IUIdObject)entry.Value;
-            
-            if (idObj is null)
-                continue;
-            
-            if (idObj.Id != id)
-                continue;
+            gameResource = (IGameResource)entry.Value;
 
+            if (gameResource is null || gameResource.Id != id) 
+                continue;
+            
             name = (string)entry.Key;
-            obj = entry.Value;
             break;
         }
 
+        if (gameResource is null || string.IsNullOrEmpty(name))
+            throw new NullReferenceException("Object was null or name was empty.");
+        
+        gameResource.Remove();
         Names.Remove(name);
-        
-        if (obj is IScript script)
-            FrameScripts.Remove(script);
-        
         Lists[type].Remove(name);
     }
 
@@ -413,7 +425,27 @@ public static class Game
         FixedExecute.Start();
     }
 
-    private static void TryAddUId(IUIdObject obj, GameAssetType type)
+    internal static void SetShaders()
+    {
+        var paths = new[]
+        {
+            Constants.ShaderVertColorPath, Constants.ShaderFragColorPath,
+            Constants.ShaderVertTexturePath, Constants.ShaderFragTexturePath,
+            Constants.ShaderVertLightPath, Constants.ShaderFragLightPath
+        };
+        var types = new[]
+        {
+            BodyVisualType.Color, BodyVisualType.Texture, BodyVisualType.Light
+        };
+
+        for (var i = 0; i < types.Length; ++i)
+        {
+            var shader = new Shader(paths[i * 2], paths[i * 2 + 1]);
+            Shaders.Add(types[i], shader);
+        }
+    }
+
+    private static void TryAddUId(IGameResource obj, GameAssetType type)
     {
         while (UIds.ContainsKey(obj.Id))
             obj.Id = new UId();

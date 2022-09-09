@@ -1,6 +1,6 @@
 ﻿namespace TyzeEngine.Interfaces;
 
-public interface IScript : IUIdObject
+public interface IScript : IGameResource
 {
     void Prepare();
     void Execute();

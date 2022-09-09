@@ -1,4 +1,5 @@
-﻿using TyzeEngine.Interfaces;
+﻿using System;
+using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Objects;
 
@@ -29,11 +30,18 @@ public sealed class Trigger : ITrigger
         Triggered?.Invoke();
         IsTriggered = true;
     }
+    
+    void IGameResource.Remove()
+    {
+    }
 
-    public static ITrigger FindOrDefault(string name)
+    public static ITrigger Find(string name)
     {
         var isFound = Game.Triggers.TryGetValue(name, out var value);
 
-        return isFound ? value : null;
+        if (isFound)
+            return value;
+
+        throw new Exception("Trigger not found.");
     }
 }

@@ -1,6 +1,6 @@
 ﻿namespace TyzeEngine.Interfaces;
 
-public interface ITrigger : IUIdObject
+public interface ITrigger : IGameResource
 {
     bool IsTriggered { get; set; }
     bool SaveStatus { get; }

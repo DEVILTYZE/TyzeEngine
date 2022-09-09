@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
 
@@ -11,29 +10,36 @@ namespace TyzeEngine.Objects;
 public class Model : IModel
 {
     private bool _disposed;
-    private uint[] _indices;
     private IVectorArray _texture = new VectorArray();
-    private List<Vector3> _vertices = new();
+    private List<Vector3> _vertices = new(), _normals = new();
+    private List<uint> _indices = new();
+    private float[] _array;
 
     public UId Id { get; set; } = new();
+    public IReadOnlyList<float> Array => _array;
     public IReadOnlyList<Vector3> Vertices => _vertices;
     public IEnumerable<Vector2> Vertices2D => Vertices.Select(vertex => vertex.Xy).ToArray();
+    public IReadOnlyList<uint> Indices => _indices;
+    public IEnumerable<float> TextureCoordinates => _texture.GetArray();
+    public IReadOnlyList<Vector3> Normals => _normals;
     public string Directory { get; private set; }
     public string Name { get; private set; }
     public bool Loaded { get; private set; }
-
-    protected Model((List<Vector3>, uint[], IVectorArray) coordinates)
-    {
-        _vertices = coordinates.Item1;
-        _indices = coordinates.Item2;
-        _texture = coordinates.Item3;
-        Loaded = true;
-    }
     
     public Model(string name, string directory = Constants.ModelsDirectory)
     {
         Directory = directory;
         Name = name;
+    }
+
+    protected Model((List<Vector3>, List<Vector3>, IVectorArray, List<uint>) coordinates)
+    {
+        _vertices = coordinates.Item1;
+        _normals = coordinates.Item2.Select(Vector3.NormalizeFast).ToList();
+        _texture = coordinates.Item3;
+        _indices = coordinates.Item4;
+        MixArrays();
+        Loaded = true;
     }
     
     ~Model() => Dispose(false);
@@ -43,68 +49,20 @@ public class Model : IModel
         if (Loaded)
             return;
 
-        string text;
+        string[] text;
 
         if (!File.Exists(Directory + Name))
-            return;
+            throw new FileNotFoundException("Model file not found.", Directory + Name);
         
         using (var sr = new StreamReader(Directory + Name))
         {
-            text = sr.ReadToEnd();
+            text = sr.ReadToEnd().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
         }
 
-        const string pattern = "\"(-*\\d+\\.*\\d*\\s)+\\s*\"";
-        var collection = Regex.Matches(text, pattern);
-        var resultFloat = new[] { new List<float>(), new List<float>() };
-        _indices = collection[0].Value.Split(new[] { ' ', '\"' }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(uint.Parse).ToArray();
-        
-        for (var i = 0; i < resultFloat.Length; ++i)
-            resultFloat[i].AddRange(collection[i + 2].Value.Split(new[] { ' ', '\"' }, 
-                StringSplitOptions.RemoveEmptyEntries).Select(float.Parse));
-
-        for (var i = 0; i < resultFloat[0].Count; i += 3)
-            _vertices.Add(new Vector3(resultFloat[0][i], resultFloat[0][i + 1], resultFloat[0][i + 2]));
-
-        for (var i = 0; i < resultFloat[1].Count; i += 2)
-            _texture.Add(resultFloat[1][i], resultFloat[1][i + 1]);
+        foreach (var str in text)
+            ParseWavefrontString(str);
 
         Loaded = true;
-    }
-
-    public (float[], uint[]) GetVectorArray(IGameObject obj)
-    {
-        float[] GetArrays(float[] texture, Vector4 color)
-        {
-            const int tStride = 2;
-            var colorArray = new[] { color.X, color.Y, color.Z, color.W };
-            var result = new List<float>(Vertices.Count * (texture.Length + Constants.Vector4Length));
-
-            for (var i = 0; i < Vertices.Count; ++i)
-            {
-                result.AddRange(new[] { Vertices[i].X, Vertices[i].Y, Vertices[i].Z });
-                result.AddRange(texture[(i * tStride)..((i + 1) * tStride)].Concat(colorArray));
-            }
-            
-            return result.ToArray();
-        }
-
-        var texture = Enumerable.Repeat(new[] { -1f, -1 }, Vertices.Count).SelectMany(x => x).ToArray();
-
-        switch (obj.Transform.Visual)
-        {
-            case BodyVisualType.Color:
-                return (GetArrays(texture, obj.Transform.Color), _indices);
-            case BodyVisualType.Texture:
-                obj.Transform.Color = Constants.NullColor;
-                break;
-            case BodyVisualType.ColorAndTexture:
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(obj.Transform.Visual), "Visual error.");
-        }
-
-        return (GetArrays(_texture.GetArray(), obj.Transform.Color), _indices);
     }
 
     public void Dispose()
@@ -113,11 +71,14 @@ public class Model : IModel
         GC.SuppressFinalize(this);
     }
 
-    public static IModel FindOrDefault(string name)
+    public static IModel Find(string name)
     {
         var isFound = Game.Models.TryGetValue(name, out var value);
 
-        return isFound ? value : null;
+        if (isFound)
+            return value;
+
+        throw new Exception("Model not found.");
     }
     
     internal static IVectorArray GetDefaultTexture(IReadOnlyList<Vector3> vertices)
@@ -133,6 +94,10 @@ public class Model : IModel
         return new VectorArray(result, ArrayType.TwoDimensions);
     }
     
+    void IGameResource.Remove()
+    {
+    }
+
     private void Dispose(bool disposing)
     {
         if (_disposed)
@@ -141,6 +106,7 @@ public class Model : IModel
         if (disposing)
         {
             _vertices = null;
+            _normals = null;
             _indices = null;
             _texture = null;
             Directory = null;
@@ -148,5 +114,51 @@ public class Model : IModel
         }
 
         _disposed = true;
+    }
+
+    private void MixArrays()
+    {
+        var result = new List<float>();
+
+        for (var i = 0; i < _vertices.Count; ++i)
+        {
+            result.AddRange(new[] { _vertices[i].X, _vertices[i].Y, _vertices[i].Z });
+            result.AddRange(new[] { _normals[i].X, _normals[i].Y, _normals[i].Z });
+            result.AddRange(_texture[i]);
+        }
+
+        _array = result.ToArray();
+    }
+
+    private void ParseWavefrontString(string str)
+    {
+        var parts = str.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        const string vertex = "v";
+        const string texture = "vt";
+        const string normal = "vn";
+        const string space = "vp";
+        const string index = "f";
+
+        switch (parts[0])
+        {
+            case vertex:
+                var value = parts[1..].Select(float.Parse).ToArray();
+                _vertices.Add(new Vector3(value[0], value[1], value[2]));
+                break;
+            case texture:
+                value = parts[1..].Select(float.Parse).ToArray();
+                _texture.Add(value[0], value[1]);
+                break;
+            case index:
+                var indexValue = parts[1..]
+                    .Select(localStr => localStr.Split('/', StringSplitOptions.RemoveEmptyEntries))
+                    .SelectMany(localStr => localStr).Select(uint.Parse);
+                _indices.AddRange(indexValue);
+                break;
+            case normal: // На будущее...
+                break;
+            case space:
+                break;
+        }
     }
 }

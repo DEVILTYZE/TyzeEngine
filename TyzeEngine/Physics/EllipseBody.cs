@@ -1,4 +1,5 @@
 ﻿using System;
+using TyzeEngine.Materials;
 using TyzeEngine.Objects;
 using Vector3 = OpenTK.Mathematics.Vector3;
 

@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Linq;
 using System.Text.Json;
+using OpenTK.Mathematics;
 using TyzeEngine.GameStructure;
 using TyzeEngine.Interfaces;
-using TyzeEngine.Physics;
+using TyzeEngine.Materials;
 
 namespace TyzeEngine.Objects;
 
@@ -14,22 +15,22 @@ public struct SaveObject : ISaveable
     private int _lastObjectId = 0;
     
     public int CurrentSceneIndex { get; set; }
-    public UId[] PlaceIds { get; set; }
-    public UId[][] PlaceObjects { get; set; }
+    public UId[] SpaceIds { get; set; }
+    public UId[][] SpaceObjects { get; set; }
     public SaveObjectState[] ObjectStates { get; set; }
 
-    public SaveObject(int currentSceneIndex, int placesCount, int objectsCount)
+    public SaveObject(int currentSceneIndex, int spacesCount, int objectsCount)
     {
         CurrentSceneIndex = currentSceneIndex;
-        PlaceIds = new UId[placesCount];
-        PlaceObjects = new UId[placesCount][];
+        SpaceIds = new UId[spacesCount];
+        SpaceObjects = new UId[spacesCount][];
         ObjectStates = new SaveObjectState[objectsCount];
     }
 
-    public void AddPlaceObjects(IPlace place)
+    public void AddPlaceObjects(ISpace space)
     {
-        PlaceIds[_lastPlaceId] = place.Id;
-        PlaceObjects[_lastPlaceId] = place.GameObjects.Select(obj => obj.Id).ToArray();
+        SpaceIds[_lastPlaceId] = space.Id;
+        SpaceObjects[_lastPlaceId] = space.GameObjects.Select(obj => obj.Id).ToArray();
         ++_lastPlaceId;
     }
 
@@ -67,14 +68,14 @@ public struct SaveObjectState : ISaveable
     {
         Id = obj.Id;
         ModelId = obj.Model.Id;
-        ResourceId = obj.Transform.Texture.Id;
+        ResourceId = obj.Visual.Texture.Id;
         BodyTypeName = obj.Body.GetType().FullName;
         Position = Vector.ToBytes(obj.Transform.Position);
         Scale = Vector.ToBytes(obj.Transform.Scale);
         Rotation = Vector.ToBytes(obj.Transform.Rotation);
-        Color = Vector.ToBytes(obj.Transform.Color);
-        VisibilityType = (int)obj.Transform.Visibility;
-        Visual = (int)obj.Transform.Visual;
+        Color = Vector.ToBytes(Color4.ToXyz(obj.Visual.Color));
+        VisibilityType = (int)obj.Visual.Visibility;
+        Visual = (int)obj.Visual.Type;
         CollisionLayer = obj.Body.CollisionLayer;
         Material = MaterialToBytes(obj.Body.Material);
         Force = Vector.ToBytes(obj.Body.Force);

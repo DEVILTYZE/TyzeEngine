@@ -4,13 +4,15 @@ using System.IO;
 using System.Text;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
+using TyzeEngine.Interfaces;
 
 namespace TyzeEngine;
 
 internal sealed class Shader : IDisposable
 {
     private bool _disposed;
-    private readonly Dictionary<string, int> _uniformLocations;
+    private readonly SortedList<string, int> _uniformLocations;
+    private readonly string _name;
 
     internal string Error { get; private set; }
     internal int Handle { get; }
@@ -20,6 +22,13 @@ internal sealed class Shader : IDisposable
     {
         Error = string.Empty;
 
+        if (!File.Exists(vertexPath))
+            throw new FileNotFoundException("Vertex shader not found.", vertexPath);
+
+        if (!File.Exists(fragmentPath))
+            throw new FileNotFoundException("Fragment shader not found.", fragmentPath);
+
+        _name = Path.GetFileNameWithoutExtension(vertexPath);
         var vertexShader = CreateShader(vertexPath, ShaderType.VertexShader);
         var fragmentShader = CreateShader(fragmentPath, ShaderType.FragmentShader);
 
@@ -42,7 +51,7 @@ internal sealed class Shader : IDisposable
         GL.DeleteShader(fragmentShader);
         
         GL.GetProgram(Handle, GetProgramParameterName.ActiveUniforms, out var countOfUniforms);
-        _uniformLocations = new Dictionary<string, int>();
+        _uniformLocations = new SortedList<string, int>();
 
         for (var i = 0; i < countOfUniforms; ++i)
         {
@@ -67,6 +76,14 @@ internal sealed class Shader : IDisposable
     }
 
     internal int GetAttributeLocation(string parameterName) => GL.GetAttribLocation(Handle, parameterName);
+    
+    internal void SetMatrix3(string name, Matrix3 matrix)
+    {
+        if (!IsEnabled)
+            Enable();
+        
+        GL.UniformMatrix3(_uniformLocations[name], true, ref matrix);
+    }
 
     internal void SetMatrix4(string name, Matrix4 matrix)
     {
@@ -75,12 +92,40 @@ internal sealed class Shader : IDisposable
         
         GL.UniformMatrix4(_uniformLocations[name], true, ref matrix);
     }
+    
+    internal void SetVector3(string name, Vector3 vector)
+    {
+        if (!IsEnabled)
+            Enable();
+        
+        GL.Uniform3(_uniformLocations[name], vector);
+    }
+    
+    internal void SetVector4(string name, Vector4 vector)
+    {
+        if (!IsEnabled)
+            Enable();
+        
+        GL.Uniform4(_uniformLocations[name], vector);
+    }
+
+    internal void SetLight(string name, ILight light)
+    {
+        if (!IsEnabled)
+            Enable();
+        
+        GL.Uniform1(_uniformLocations[$"{name}.ambient"], light.Ambient);
+        GL.Uniform1(_uniformLocations[$"{name}.specular"], light.Specular);
+        GL.Uniform1(_uniformLocations[$"{name}.shininess"], light.Shininess);
+    }
 
     public void Dispose()
     {
         ReleaseUnmanagedResources();
         GC.SuppressFinalize(this);
     }
+
+    public override string ToString() => Handle + " | " + _name;
 
     private void ReleaseUnmanagedResources()
     {

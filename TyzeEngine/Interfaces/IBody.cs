@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using OpenTK.Mathematics;
-using TyzeEngine.Physics;
+using TyzeEngine.Materials;
 
 namespace TyzeEngine.Interfaces;
 

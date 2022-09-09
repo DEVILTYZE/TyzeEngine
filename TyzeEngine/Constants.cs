@@ -14,8 +14,14 @@ internal static class Constants
     internal const string SavesDirectory = SystemDirectory + "saves\\";
     
     // FILES
-    internal const string ShaderVertTexturePath = ShadersDirectory + "shader.vert";
-    internal const string ShaderFragTexturePath = ShadersDirectory + "shader.frag";
+    internal const string ShaderVertColorPath = ShadersDirectory + "shaderColor.vert";
+    internal const string ShaderFragColorPath = ShadersDirectory + "shaderColor.frag";
+    internal const string ShaderVertLightPath = ShadersDirectory + "shaderLight.vert";
+    internal const string ShaderFragLightPath = ShadersDirectory + "shaderLight.frag";
+    internal const string ShaderVertStandardPath = ShadersDirectory + "shaderStandard.vert";
+    internal const string ShaderFragStandardPath = ShadersDirectory + "shaderStandard.frag";
+    internal const string ShaderVertTexturePath = ShadersDirectory + "shaderTexture.vert";
+    internal const string ShaderFragTexturePath = ShadersDirectory + "shaderTexture.frag";
     internal const string FileNotExists = SystemDirectory + "error.png"; // Path
     internal const string DefaultModelName = "model";
     internal static readonly string DefaultSaveName = "save_" + DateTime.Now.ToString("ddMMyyyyHHmmss");
@@ -39,8 +45,10 @@ internal static class Constants
     internal static readonly Vector3 DefaultSize = new(1, 1, 1);
     internal static readonly Vector3 DefaultSize2D = new(1, 1, 0);
     internal static readonly Vector3 DefaultRotation = Vector3.Zero;
-    internal static readonly Vector4 DefaultColor = new(.5f, .5f, .5f, 1);
-    internal static readonly Vector4 NullColor = new(0, 0, 0, 0);
+    internal static readonly Color4 DefaultColor = new(.5f, .5f, .5f, 1);
+    internal static readonly Color4 NullColor = new(0, 0, 0, 0);
+    internal static readonly Color4 DarkSpaceColor = new(.15f, .15f, .15f, 1);
+    internal static readonly Color4 LightSpaceColor = new(.85f, .85f, .85f, 1);
     
     // AUDIO
     internal const int Frequency441 = 44100;

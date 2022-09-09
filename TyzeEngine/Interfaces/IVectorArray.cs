@@ -1,4 +1,6 @@
-﻿namespace TyzeEngine.Interfaces;
+﻿using System.Collections.Generic;
+
+namespace TyzeEngine.Interfaces;
 
 public interface IVectorArray
 {
@@ -9,5 +11,6 @@ public interface IVectorArray
     void Add(float x, float y);
     void Add(float x, float y, float z);
     void Add(float x, float y, float z, float t);
+    IEnumerable<float> this[int index] { get; }
     internal float[] GetArray();
 }

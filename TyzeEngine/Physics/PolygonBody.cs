@@ -1,5 +1,6 @@
 ﻿using System;
 using OpenTK.Mathematics;
+using TyzeEngine.Materials;
 using TyzeEngine.Objects;
 
 namespace TyzeEngine.Physics;

@@ -12,11 +12,12 @@ public class Point : Model
     {
     }
 
-    private static (List<Vector3>, uint[], IVectorArray) GetModel()
+    private static (List<Vector3>, List<Vector3>, IVectorArray, List<uint>) GetModel()
     {
         var vertices = new List<Vector3> { new(0, 0, 0) };
-        var indices = Enumerable.Repeat((uint)0, 1).ToArray();
+        var indices = Enumerable.Repeat((uint)0, 1).ToList();
+        var normals = new List<Vector3>(Enumerable.Repeat(Vector3.Zero, vertices.Count));
 
-        return (vertices, indices, GetDefaultTexture(vertices));
+        return (vertices, normals, GetDefaultTexture(vertices), indices);
     }
 }

@@ -1,26 +1,21 @@
 ﻿using System;
 using OpenTK.Mathematics;
-using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Objects;
 
-public sealed class Camera : ICamera
+public static class Camera
 {
-    private static readonly Lazy<Camera> InstanceHolder = new(() => new Camera());
-    public static ICamera Instance => InstanceHolder.Value;
+    private static bool _isInverted, _isFirstFrame = true;
+    private static Vector2 _lastPos;
+    private static Vector3 _direction, _up;
+    private static float _pitch, _yaw, _fov, _invertedControlCoef = 1, _aspectRatio;
+    private static Vector3 Right => Vector3.Cross(_direction, _up);
 
-    private bool _isInverted, _isFirstFrame = true;
-    private Vector2 _lastPos;
-    private Vector3 _direction, _up;
-    private float _pitch, _yaw, _fov, _invertedControlCoef = 1;
-    private Vector3 Right => Vector3.Cross(_direction, _up);
-
-    public Vector3 Position { get; set; }
-    public float AspectRatio { get; set; }
-    public Matrix4 View => Matrix4.LookAt(Position, Position + _direction, _up);
-    public Matrix4 Projection => Matrix4.CreatePerspectiveFieldOfView(_fov, AspectRatio, .01f, 100);
+    public static Vector3 Position { get; set; }
+    public static Matrix4 View => Matrix4.LookAt(Position, Position + _direction, _up);
+    public static Matrix4 Projection => Matrix4.CreatePerspectiveFieldOfView(_fov, _aspectRatio, .01f, 100);
     
-    public float Pitch
+    public static float Pitch
     {
         get => MathHelper.RadiansToDegrees(_pitch);
         set
@@ -31,7 +26,7 @@ public sealed class Camera : ICamera
         }
     }
 
-    public float Yaw
+    public static float Yaw
     {
         get => MathHelper.RadiansToDegrees(_yaw);
         set
@@ -41,7 +36,7 @@ public sealed class Camera : ICamera
         }
     }
     
-    public float Fov
+    public static float Fov
     {
         get => MathHelper.RadiansToDegrees(_fov);
         set
@@ -51,7 +46,7 @@ public sealed class Camera : ICamera
         }
     }
 
-    public bool IsInverted
+    public static bool IsInverted
     {
         get => _isInverted;
         set
@@ -65,9 +60,9 @@ public sealed class Camera : ICamera
         }
     }
 
-    private Camera() => ToDefault();
+    static Camera() => ToDefault();
 
-    public void Move(float speed, float time)
+    public static void Move(float speed, float time)
     {
         var speedAtTime = speed * time;
         
@@ -85,7 +80,7 @@ public sealed class Camera : ICamera
             Position -= _up * speedAtTime;
     }
 
-    public void Rotate(float sensitivity, float time)
+    public static void Rotate(float sensitivity, float time)
     {
         if (_isFirstFrame)
         {
@@ -104,7 +99,7 @@ public sealed class Camera : ICamera
         Pitch += deltaY;
     }
     
-    public void FocusToWorldCenter()
+    public static void FocusToWorldCenter()
     {
         // VECTORS
         _direction = Vector3.NormalizeFast(Vector3.Zero - Position);
@@ -121,7 +116,7 @@ public sealed class Camera : ICamera
         _yaw = angle - MathHelper.PiOver2;
     }
 
-    public void ToDefault()
+    public static void ToDefault()
     {
         Position = new Vector3(0, 0, 10);
         _isFirstFrame = true;
@@ -130,9 +125,9 @@ public sealed class Camera : ICamera
         Fov = Constants.FowDefault;
     }
 
-    public override string ToString() => $"Camera.\r\nPos: {Position}\r\nDir: {_direction}\r\nUp: {_up}";
+    internal static void SetAspectRatio(float aspectRatio) => _aspectRatio = aspectRatio;
 
-    private void Update()
+    private static void Update()
     {
         var pitchCos = MathF.Cos(_pitch);
         var x = pitchCos * MathF.Cos(_yaw);

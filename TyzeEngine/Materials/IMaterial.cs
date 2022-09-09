@@ -1,6 +1,8 @@
-﻿namespace TyzeEngine.Physics;
+﻿using TyzeEngine.Interfaces;
 
-public interface IMaterial
+namespace TyzeEngine.Materials;
+
+public interface IMaterial : IGameResource
 {
     float Density { get; }
     float Restitution { get; }

@@ -12,31 +12,39 @@ public class Cube : Model
     {
     }
     
-    private static (List<Vector3>, uint[], IVectorArray) GetModel(float size)
+    private static (List<Vector3>, List<Vector3>, IVectorArray, List<uint>) GetModel(float size)
     {
         var vertices = GetVertices(size);
-        var indices = new uint[]
+        var indices = new List<uint>
         {
-            0, 1, 2, 0, 2, 3, 0, 4, 5, 1, 5, 6,
-            1, 6, 2, 3, 2, 6, 3, 6, 7, 4, 0, 3,
-            4, 3, 7, 5, 1, 0, 5, 4, 7, 5, 7, 6
+            4, 2, 0, 2, 7, 3, 6, 5, 7, 1, 7, 5,
+            0, 3, 1, 4, 1, 5, 4, 6, 2, 2, 6, 7,
+            6, 4, 5, 1, 3, 7, 0, 2, 3, 4, 0, 1
         };
-        var texture = new VectorArray(new[] { 0f, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1 }, ArrayType.TwoDimensions);
+        var texture = new VectorArray(new[]
+        {
+            .875f, .5f, .625f, .75f, .625f, .5f, .625f, .75f, .375f, 1, .375f, .75f, .625f, 0, .375f, .25f, .375f, 0, 
+            .375f, .5f, .125f, .75f, .125f, .5f, .625f, .5f, .375f, .75f, .375f, .5f, .625f, .25f, .375f, .5f, .375f, 
+            .25f, .875f, .5f, .875f, .75f, .625f, .75f, .625f, .75f, .625f, 1, .375f, 1, .625f, 0, .625f, .25f, .375f,
+            .25f, .375f, .5f, .375f, .75f, .125f, .75f, .625f, .5f, .625f, .75f, .375f, .75f, .625f, .25f, .625f, .5f,
+            .375f, .5f
+        }, ArrayType.TwoDimensions);
+        var normals = vertices.Select(Vector3.NormalizeFast).ToList();
 
-        return (vertices, indices, texture);
+        return (vertices, normals, texture, indices);
     }
 
     private static List<Vector3> GetVertices(float size)
     {
         var rect = new Vector3[]
         {
-            new(-size, -size, size), new(size, -size, size), 
-            new(size, size, size), new(-size, size, size)
+            new(size, size, size), new(size, size, -size), 
+            new(size, -size, size), new(size, -size, -size)
         };
         var backRect = new Vector3[rect.Length];
 
         for (var i = 0; i < rect.Length; ++i)
-            backRect[i] = new Vector3(rect[i].X, rect[i].Y, -size);
+            backRect[i] = new Vector3(-rect[i].X, rect[i].Y, rect[i].Z);
 
         return rect.Concat(backRect).ToList();
     }

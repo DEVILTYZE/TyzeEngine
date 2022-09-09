@@ -1,4 +1,5 @@
-﻿using TyzeEngine.Interfaces;
+﻿using System;
+using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Objects;
 
@@ -12,10 +13,19 @@ public abstract class Script : IScript
     
     public abstract void FixedExecute();
 
-    public static IScript FindOrDefault(string name)
+    void IGameResource.Remove()
+    {
+        if (Game.FrameScripts.Contains(this))
+            Game.FrameScripts.Remove(this);
+    }
+
+    public static IScript Find(string name)
     {
         var isFound = Game.Scripts.TryGetValue(name, out var value);
 
-        return isFound ? value : null;
+        if (isFound)
+            return value;
+
+        throw new Exception("Script not found.");
     }
 }

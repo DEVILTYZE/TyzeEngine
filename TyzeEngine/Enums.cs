@@ -22,7 +22,7 @@ public enum BodyVisualType
 {
     Color = 0,
     Texture = 1,
-    ColorAndTexture = 2
+    Light = 2
 }
 
 public enum RunMode
@@ -182,10 +182,11 @@ public enum ButtonCode
 internal enum GameAssetType
 {
     Scene = 0,
-    Place = 1,
+    Space = 1,
     GameObject = 2,
     Script = 3,
     Trigger = 4,
     Resource = 5,
-    Model = 6
+    Model = 6,
+    Material = 7
 }

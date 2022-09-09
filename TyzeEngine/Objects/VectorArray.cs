@@ -1,11 +1,20 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System;
+using System.Collections.Generic;
 using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Objects;
 
 public class VectorArray : IVectorArray
 {
+    private static readonly SortedList<ArrayType, int> Strides = new()
+    {
+        { ArrayType.Unknown, 0 },
+        { ArrayType.OneDimension, 1 },
+        { ArrayType.TwoDimensions, 2 },
+        { ArrayType.ThreeDimensions, 3 },
+        { ArrayType.FourDimensions, 4 }
+    };
+
     private readonly List<float> _list;
     
     public ArrayType Type { get; private set; }
@@ -59,5 +68,8 @@ public class VectorArray : IVectorArray
         _list.AddRange(new[] { x, y, z, w });
     }
 
+    public IEnumerable<float> this[int index] 
+        => new ArraySegment<float>(_list.ToArray(), index * Strides[Type], Strides[Type]).ToArray();
+    
     float[] IVectorArray.GetArray() => _list.ToArray();
 }

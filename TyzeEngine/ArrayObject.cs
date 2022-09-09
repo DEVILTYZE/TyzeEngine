@@ -7,10 +7,9 @@ namespace TyzeEngine;
 internal sealed class ArrayObject : IDisposable
 {
     private readonly List<int> _attributeList;
-    private readonly List<BufferObject> _bufferList;
     private bool _disposed;
-    private int _count;
 
+    internal SortedList<BufferTarget, BufferObject> Buffers { get; }
     internal int Handle { get; }
     internal bool IsEnabled { get; private set; }
 
@@ -18,9 +17,8 @@ internal sealed class ArrayObject : IDisposable
     {
         Handle = GL.GenVertexArray();
         IsEnabled = false;
-        _bufferList = new List<BufferObject>();
+        Buffers = new SortedList<BufferTarget, BufferObject>();
         _attributeList = new List<int>();
-        _count = 0;
     }
     
     ~ArrayObject() => ReleaseUnmanagedResources();
@@ -37,7 +35,7 @@ internal sealed class ArrayObject : IDisposable
         IsEnabled = false;
     }
 
-    internal void AttachBuffer(BufferObject buffer, int count)
+    internal void AttachBuffer(BufferObject buffer)
     {
         if (!IsEnabled)
             Enable();
@@ -45,15 +43,14 @@ internal sealed class ArrayObject : IDisposable
         if (!buffer.IsEnabled)
             buffer.Enable();
 
-        _count = count;
-        _bufferList.Add(buffer);
+        Buffers.Add(buffer.Type, buffer);
     }
 
-    internal void EnableAttribute(int locationAttribute, int count, VertexAttribPointerType type, int stride, int offset)
+    internal void EnableAttribute(int locationAttribute, int size, VertexAttribPointerType type, int stride, int offset)
     {
         _attributeList.Add(locationAttribute);
         GL.EnableVertexAttribArray(locationAttribute);
-        GL.VertexAttribPointer(locationAttribute, count, type, false, stride, offset);
+        GL.VertexAttribPointer(locationAttribute, size, type, false, stride, offset);
         GL.EnableVertexAttribArray(0);
     }
 
@@ -61,27 +58,25 @@ internal sealed class ArrayObject : IDisposable
     {
         foreach (var locationAttribute in _attributeList)
             GL.DisableVertexAttribArray(locationAttribute);
+        
+        _attributeList.Clear();
     }
-
-    internal void Draw(PrimitiveType primitive) => Draw(primitive, 0, _count);
-
-    internal void Draw(PrimitiveType primitive, DrawElementsType type) => Draw(primitive, 0, _count, type);
     
-    internal void Draw(PrimitiveType primitive, int startIndex, int endIndex)
+    internal void Draw(PrimitiveType primitive, int first, int count)
     {
         if (!IsEnabled)
             Enable();
 
-        GL.DrawArrays(primitive, startIndex, endIndex);
+        GL.DrawArrays(primitive, first, count);
         Disable();
     }
 
-    internal void Draw(PrimitiveType primitive, int startIndex, int endIndex, DrawElementsType type)
+    internal void Draw(PrimitiveType primitive, int startIndex, int count, DrawElementsType type)
     {
         if (!IsEnabled)
             Enable();
 
-        GL.DrawElements(primitive, endIndex, type, startIndex);
+        GL.DrawElements(primitive, count, type, startIndex);
         Disable();
     }
 
@@ -100,7 +95,7 @@ internal sealed class ArrayObject : IDisposable
         Disable();
         GL.DeleteVertexArray(Handle);
 
-        foreach (var buffer in _bufferList)
+        foreach (var (_, buffer) in Buffers)
             buffer.Dispose();
 
         _disposed = true;

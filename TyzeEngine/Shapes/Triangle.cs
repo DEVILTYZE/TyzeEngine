@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Objects;
@@ -11,11 +12,12 @@ public class Triangle : Model
     {
     }
     
-    private static (List<Vector3>, uint[], IVectorArray) GetModel(float size)
+    private static (List<Vector3>, List<Vector3>, IVectorArray, List<uint>) GetModel(float size)
     {
         var vertices = new List<Vector3> { new(-size, -size, 0), new(size, -size, 0), new(0, size, 0) };
-        var indices = new uint[] { 0, 1, 2 };
+        var indices = new List<uint> { 0, 1, 2 };
+        var normals = new List<Vector3>(Enumerable.Repeat(Vector3.UnitZ, vertices.Count));
 
-        return (vertices, indices, GetDefaultTexture(vertices));
+        return (vertices, normals, GetDefaultTexture(vertices), indices);
     }
 }

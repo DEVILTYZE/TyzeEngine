@@ -1,6 +1,5 @@
 ﻿using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
-using TyzeEngine.Resources;
 
 namespace TyzeEngine.Objects;
 
@@ -25,11 +24,10 @@ public class Transform : ITransform
         }
     }
     public Vector3 Rotation { get; set; }
-    public Matrix3 RotationMatrix => Matrix3.CreateFromQuaternion(Quaternion.FromEulerAngles(Rotation));
-    public Vector4 Color { get; set; } = Constants.DefaultColor;
-    public IResource Texture { get; set; }
-    public Visibility Visibility { get; set; } = Visibility.Visible;
-    public BodyVisualType Visual { get; set; } = BodyVisualType.Color;
+    public Matrix4 TranslationMatrix => Matrix4.CreateTranslation(Position);
+    public Matrix4 ScaleMatrix => Matrix4.CreateScale(Scale);
+    public Matrix4 RotationMatrix => Matrix4.CreateFromQuaternion(Quaternion.FromEulerAngles(Rotation));
+    public Matrix4 ModelMatrix => Matrix4.Identity * ScaleMatrix * RotationMatrix * TranslationMatrix;
 
     public Transform()
     {
@@ -37,21 +35,10 @@ public class Transform : ITransform
         Rotation = Constants.DefaultRotation;
     }
     
-    public void SetColor(byte r, byte g, byte b, byte a) => Color = new Vector4(
-        (float)r / byte.MaxValue, 
-        (float)g / byte.MaxValue, 
-        (float)b / byte.MaxValue,
-        (float)a / byte.MaxValue
-    );
-    
     public ITransform Clone() => new Transform
     {
         Position = Position,
         _scale = Scale,
-        Rotation = Rotation,
-        Color = Color,
-        Visibility = Visibility,
-        Visual = Visual,
-        Texture = Texture
+        Rotation = Rotation
     };
 }

@@ -4,9 +4,11 @@ using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.GameStructure;
 
-public interface IPlace : IDisposable, IUIdObject
+public interface ISpace : IDisposable, IGameResource
 {
-    List<IPlace> NeighbourPlaces { get; set; }
+    internal string SceneOrSpaceName { get; set; }
+    
+    List<ISpace> NeighbourSpaces { get; set; }
     List<IGameObject> GameObjects { get; set; }
     bool Loaded { get; set; }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Resources;
 
@@ -8,6 +9,7 @@ public abstract class Resource : IResource
     protected bool Disposed;
 
     public UId Id { get; set; } = new();
+
     public int Handle { get; protected set; } = -1;
     public string Path { get; private set; }
     public bool LoadError { get; protected set; }
@@ -27,6 +29,10 @@ public abstract class Resource : IResource
         Dispose(true);
         GC.SuppressFinalize(this);
     }
+    
+    void IGameResource.Remove()
+    {
+    }
 
     protected virtual void Dispose(bool disposing)
     {
@@ -42,11 +48,14 @@ public abstract class Resource : IResource
         Disposed = true;
     }
     
-    public static IResource FindOrDefault(string name)
+    public static IResource Find(string name)
     {
         var isFound = Game.Resources.TryGetValue(name, out var value);
 
-        return isFound ? value : null;
+        if (isFound)
+            return value;
+
+        throw new Exception("Resource not found.");
     }
     
     public static IResource GetByPath(string path)

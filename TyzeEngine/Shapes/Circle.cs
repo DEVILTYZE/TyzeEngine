@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Objects;
@@ -8,16 +9,17 @@ namespace TyzeEngine.Shapes;
 
 public class Circle : Model
 {
-    public Circle(float radius = 1, float angle = MathF.PI / 10) : base(GetModel(radius, angle))
+    public Circle(float radius = 1, float angle = MathF.PI / 20) : base(GetModel(radius, angle))
     {
     }
     
-    private static (List<Vector3>, uint[], IVectorArray) GetModel(float radius, float angle)
+    private static (List<Vector3>, List<Vector3>, IVectorArray, List<uint>) GetModel(float radius, float angle)
     {
         var vertices = GetVertices(radius, angle);
-        var indices = GetIndices(vertices.Count / Constants.Vector3Length - 1);
+        var indices = GetIndices(vertices.Count - 1);
+        var normals = new List<Vector3>(Enumerable.Repeat(Vector3.UnitZ, vertices.Count));
 
-        return (vertices, indices, GetDefaultTexture(vertices));
+        return (vertices, normals, GetDefaultTexture(vertices), indices);
     }
 
     private static List<Vector3> GetVertices(float radius, float angle)
@@ -27,7 +29,7 @@ public class Circle : Model
 
         vertices.Add(new Vector3(start, start, 0));
         
-        for (var localAngle = 0f; localAngle <= 2 * Math.PI; localAngle += angle)
+        for (var localAngle = 0f; localAngle <= Math.Tau; localAngle += angle)
         {
             var x = radius * (float)Math.Cos(localAngle);
             var y = radius * (float)Math.Sin(localAngle);
@@ -37,7 +39,7 @@ public class Circle : Model
         return vertices;
     }
     
-    private static uint[] GetIndices(int verticesCount)
+    private static List<uint> GetIndices(int verticesCount)
     {
         var result = new List<uint>(verticesCount);
 
@@ -52,6 +54,6 @@ public class Circle : Model
         result.Add((uint)verticesCount);
         result.Add(1);
 
-        return result.ToArray();
+        return result;
     }
 }
