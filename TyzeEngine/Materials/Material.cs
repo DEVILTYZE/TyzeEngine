@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Materials;
@@ -14,14 +15,21 @@ public abstract class Material : IMaterial
     void IGameResource.Remove()
     {
     }
-
-    public static IMaterial Find(string name)
+    
+    /// <summary>
+    /// Ищет материал по имени среди всех добавленных в игру материалов.
+    /// </summary>
+    /// <param name="name">Имя материала.</param>
+    /// <returns>Объект материала, приведённый к типу IMaterial.</returns>
+    /// <exception cref="ArgumentNullException">Имя равно null.</exception>
+    /// <exception cref="Exception">Материал не найден.</exception>
+    public static IMaterial Find([NotNull] string name)
     {
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentNullException(nameof(name), "Name was null.");
+        
         var isFound = Game.Materials.TryGetValue(name, out var value);
 
-        if (isFound)
-            return value;
-
-        throw new Exception("Material not found.");
+        return isFound ? value : throw new Exception("Material not found.");
     }
 }

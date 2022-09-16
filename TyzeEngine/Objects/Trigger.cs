@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Objects;
@@ -35,13 +36,20 @@ public sealed class Trigger : ITrigger
     {
     }
 
-    public static ITrigger Find(string name)
+    /// <summary>
+    /// Ищет триггер по имени среди всех добавленных в игру триггеров.
+    /// </summary>
+    /// <param name="name">Имя триггера.</param>
+    /// <returns>Объект триггера, приведённый к типу ITrigger.</returns>
+    /// <exception cref="ArgumentNullException">Имя равно null.</exception>
+    /// <exception cref="Exception">Триггер не найден.</exception>
+    public static ITrigger Find([NotNull] string name)
     {
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentNullException(nameof(name), "Name was null.");
+        
         var isFound = Game.Triggers.TryGetValue(name, out var value);
 
-        if (isFound)
-            return value;
-
-        throw new Exception("Trigger not found.");
+        return isFound ? value : throw new Exception("Trigger not found.");
     }
 }

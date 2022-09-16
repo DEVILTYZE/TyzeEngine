@@ -6,29 +6,25 @@ namespace TyzeEngine;
 internal static class Constants
 {
     // DIRECTORIES
-    internal const string AssetsDirectory = "assets\\";
-    internal const string ModelsDirectory = AssetsDirectory + "models\\";
-    internal const string SystemDirectory = AssetsDirectory + "system\\";
-    internal const string DefaultModelsDirectory = ModelsDirectory + "default\\";
-    internal const string ShadersDirectory = AssetsDirectory + "shaders\\";
-    internal const string SavesDirectory = SystemDirectory + "saves\\";
+    internal const string AssetsDirectory = "Assets\\";
+    internal const string ModelsDirectory = AssetsDirectory + "Models\\";
+    internal const string SystemDirectory = AssetsDirectory + "System\\";
+    internal const string DefaultModelsDirectory = ModelsDirectory + "Default\\";
+    internal const string ShadersDirectory = "Shaders\\";
+    internal const string SavesDirectory = SystemDirectory + "Saves\\";
     
     // FILES
-    internal const string ShaderVertColorPath = ShadersDirectory + "shaderColor.vert";
-    internal const string ShaderFragColorPath = ShadersDirectory + "shaderColor.frag";
-    internal const string ShaderVertLightPath = ShadersDirectory + "shaderLight.vert";
-    internal const string ShaderFragLightPath = ShadersDirectory + "shaderLight.frag";
-    internal const string ShaderVertStandardPath = ShadersDirectory + "shaderStandard.vert";
-    internal const string ShaderFragStandardPath = ShadersDirectory + "shaderStandard.frag";
-    internal const string ShaderVertTexturePath = ShadersDirectory + "shaderTexture.vert";
-    internal const string ShaderFragTexturePath = ShadersDirectory + "shaderTexture.frag";
-    internal const string FileNotExists = SystemDirectory + "error.png"; // Path
+    internal const string ShaderVertLinePath = ShadersDirectory + "ShaderLine.vert";
+    internal const string ShaderFragLinePath = ShadersDirectory + "ShaderLine.frag";
+    internal const string ShaderVertObjectPath = ShadersDirectory + "ShaderObject.vert";
+    internal const string ShaderFragObjectPath = ShadersDirectory + "ShaderObject.frag";
+    internal const string FileNotExists = SystemDirectory + "Error.png"; // Path
     internal const string DefaultModelName = "model";
     internal static readonly string DefaultSaveName = "save_" + DateTime.Now.ToString("ddMMyyyyHHmmss");
     internal const string SaveExtension = ".sav";
     
     // DEFAULT VALUES
-    internal const double FixedTimeLimit = .02;
+    internal const double FixedTimeLimit = .01;
     internal const float YawDefault = -45;
     internal const float FowDefault = 45;
     internal const float OneSecond = 1;

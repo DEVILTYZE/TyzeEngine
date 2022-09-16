@@ -1,23 +1,23 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using OpenTK.Mathematics;
-using TyzeEngine.Interfaces;
 using TyzeEngine.Objects;
 
 namespace TyzeEngine.Shapes;
 
 public class Point : Model
 {
-    public Point() : base(GetModel())
+    public Point()
     {
+        SetModel();
+        base.SetModel();
     }
 
-    private static (List<Vector3>, List<Vector3>, IVectorArray, List<uint>) GetModel()
+    private new void SetModel()
     {
-        var vertices = new List<Vector3> { new(0, 0, 0) };
-        var indices = Enumerable.Repeat((uint)0, 1).ToList();
-        var normals = new List<Vector3>(Enumerable.Repeat(Vector3.Zero, vertices.Count));
-
-        return (vertices, normals, GetDefaultTexture(vertices), indices);
+        Vertices = new List<Vector3> { new(0, 0, 0) };
+        Indices = Enumerable.Repeat((uint)0, 1).ToList();
+        Normals = new List<Vector3>(Enumerable.Repeat(Vector3.Zero, Vertices.Count));
+        Texture = GetDefaultTexture(Vertices);
     }
 }

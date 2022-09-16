@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using OpenTK.Graphics.OpenGL4;
 
 namespace TyzeEngine;
@@ -56,9 +57,7 @@ internal sealed class ArrayObject : IDisposable
 
     internal void DisableAttributes()
     {
-        foreach (var locationAttribute in _attributeList)
-            GL.DisableVertexAttribArray(locationAttribute);
-        
+        _attributeList.ForEach(GL.DisableVertexAttribArray);
         _attributeList.Clear();
     }
     
@@ -94,10 +93,7 @@ internal sealed class ArrayObject : IDisposable
         DisableAttributes();
         Disable();
         GL.DeleteVertexArray(Handle);
-
-        foreach (var (_, buffer) in Buffers)
-            buffer.Dispose();
-
+        Buffers.ToList().ForEach(pair => pair.Value?.Dispose());
         _disposed = true;
     }
 }

@@ -13,6 +13,6 @@ public interface IGameObject : IDisposable, IDeepCloneable<IGameObject>, IGameRe
     IVisual Visual { get; }
     bool SaveStatus { get; set; }
 
-    internal void Load();
     internal void Draw(IEnumerable<IGameObject> lights);
+    internal void DrawLines();
 }

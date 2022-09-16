@@ -28,6 +28,8 @@ internal static class Vector
         return new Vector4(floats[0], floats[1], floats[2], floats[3]);
     }
 
+    internal static Vector4 ToVector4(Color4 color) => new(color.R, color.G, color.B, color.A);
+
     internal static Quaternion ToQuaternion(byte[] data)
     {
         var floats = ToFloats(data, Constants.Vector4Length).ToArray();
@@ -78,16 +80,16 @@ internal static class Vector
 
         return data;
     }
-    
-    internal static IEnumerable<float> ToFloats(byte[] data, int length)
+
+    internal static IEnumerable<float> ToFloats(Vector3 vector) => new[] { vector.X, vector.Y, vector.Z };
+
+    internal static IEnumerable<float> ToFloats(Vector4 vector) => new[] { vector.X, vector.Y, vector.Z, vector.W };
+
+    private static IEnumerable<float> ToFloats(byte[] data, int length)
     {
         const int stride = sizeof(float);
 
         for (var i = 0; i < length; ++i)
             yield return BitConverter.ToSingle(data, i * stride);
     }
-
-    internal static IEnumerable<float> ToFloats(Vector3 vector) => new[] { vector.X, vector.Y, vector.Z };
-
-    internal static IEnumerable<float> ToFloats(Vector4 vector) => new[] { vector.X, vector.Y, vector.Z, vector.W };
 }

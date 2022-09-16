@@ -30,23 +30,24 @@ public static class Game
     private static readonly SortedList<string, IResource> PrivateResources = new();
     private static readonly SortedList<string, IModel> PrivateModels = new();
     private static readonly SortedList<string, IMaterial> PrivateMaterials = new();
+    private static bool _isRunning;
     private static int _currentSceneIndex;
     private static readonly IReadOnlyDictionary<GameAssetType, IDictionary> Lists;
     private static Stopwatch _fixedTime;
     private static readonly Task FixedExecute = new(() =>
     {
-        while (IsRunning)
+        while (_isRunning)
         {
-            if (_fixedTime.Elapsed.TotalSeconds <= FixedTime) 
+            if (_fixedTime.Elapsed.TotalSeconds <= Settings.FixedTime) 
                 continue;
             
-            foreach (var script in FrameScripts)
-                script.FixedExecute();
-            
+            FrameScripts.ForEach(script => script.FixedExecute());
             _fixedTime.Restart();
         }
     });
 
+    public static GameSettings Settings { get; } = new();
+    
     internal static IReadOnlyDictionary<string, IScene> Scenes => PrivateScenes;
     internal static IReadOnlyDictionary<string, ISpace> Spaces => PrivateSpaces;
     internal static IReadOnlyDictionary<string, IGameObject> GameObjects => Objects;
@@ -57,16 +58,11 @@ public static class Game
     internal static IReadOnlyDictionary<string, IMaterial> Materials => PrivateMaterials;
     internal static readonly List<IScript> FrameScripts = new();
     internal static readonly SortedList<BodyVisualType, Shader> Shaders = new();
-
-    /// <summary> Режим запуска. Значение по умолчанию — Debug. </summary>
-    public static RunMode RunMode { get; set; } = RunMode.Debug;
-    public static Saver Saver { get; set; } = new();
-    public static double FixedTime { get; set; } = Constants.FixedTimeLimit;
-    public static bool IsRunning { get; private set; }
     
     /// <summary> Стандартное имя сцены, которая изначально находится в игре. </summary>
     public const string StandardSceneName = "StandardScene";
-    public const string StandardSpaceName = "StandardPlace";
+    /// <summary> Стандартное имя пространства, которое изначально находится в игре. </summary>
+    public const string StandardSpaceName = "StandardSpace";
 
     #endregion
 
@@ -83,31 +79,34 @@ public static class Game
             { GameAssetType.Model, PrivateModels },
             { GameAssetType.Material, PrivateMaterials }
         };
-        var space = new Space();
-        Add(StandardSceneName, new Scene(space));
-        Add(StandardSpaceName, space, StandardSceneName);
+        Add(StandardSceneName, StandardSpaceName, new Scene());
     }
 
     /// <summary>
     /// Запуск окна с игрой.
     /// </summary>
     /// <param name="nativeWindowSettings">Настройки окна.</param>
-    /// <exception cref="Exception">при повторном вызов метода.</exception>
+    /// <exception cref="Exception">Повторный вызов метода.</exception>
     public static void Run(NativeWindowSettings nativeWindowSettings)
     {
-        if (IsRunning)
+        if (_isRunning)
             throw new Exception("Game is already running.");
         
-        IsRunning = true;
+        _isRunning = true;
         var gameWindowSettings = new GameWindowSettings { RenderFrequency = 144, UpdateFrequency = 144 };
-        using var window = new TyzeWindow(gameWindowSettings, nativeWindowSettings);
-        window.IsDebugMode = RunMode == RunMode.Debug;
-        window.Scenes = PrivateScenes.Select(pair => pair.Value).ToList();
-        window.Scripts = FrameScripts;
-        window.CurrentSceneIndex = _currentSceneIndex;
-        window.Run();
-        IsRunning = false;
+        
+        using (Settings.Window = new TyzeWindow(gameWindowSettings, nativeWindowSettings))
+        {
+            Settings.Window.IsDebugMode = Settings.RunMode == RunMode.Debug;
+            Settings.Window.Scenes = PrivateScenes.Select(pair => pair.Value).ToList();
+            Settings.Window.Scripts = FrameScripts;
+            Settings.Window.CurrentSceneIndex = _currentSceneIndex;
+            Settings.Window.Run();
+            _isRunning = false;
+        }
 
+        Settings.Window = null;
+        
         if (FixedExecute.Status == TaskStatus.Running)
             FixedExecute.Wait(100);
     }
@@ -121,14 +120,14 @@ public static class Game
 
         var saveObject = new SaveObject(_currentSceneIndex, PrivateSpaces.Count, Objects.Count);
 
-        foreach (var (_, place) in PrivateSpaces)
-            saveObject.AddPlaceObjects(place);
+        foreach (var (_, space) in PrivateSpaces)
+            saveObject.AddSpaceObjects(space);
 
         foreach (var (_, obj) in Objects.Where(localObj => localObj.Value.SaveStatus))
             saveObject.AddSaveObjectState(obj);
 
         var bytes = saveObject.Save();
-        Saver.Save(bytes, fileName);
+        Settings.Saver.Save(bytes, fileName);
     }
 
     public static bool Load(string fileName)
@@ -187,13 +186,13 @@ public static class Game
             obj.Body.IsEnabled = state.IsEnabled;
         }
         
-        foreach (var (_, place) in PrivateSpaces)
+        foreach (var (_, space) in PrivateSpaces)
         {
             var index = -1;
             
             for (var i = 0; i < saveObject.SpaceIds.Length; ++i)
             {
-                if (saveObject.SpaceIds[i] != place.Id) 
+                if (saveObject.SpaceIds[i] != space.Id) 
                     continue;
                 
                 index = i;
@@ -208,7 +207,7 @@ public static class Game
 
             foreach (var id in saveObject.SpaceObjects[index])
             {
-                if (place.GameObjects.Any(obj => obj.Id == id))
+                if (space.GameObjects.Any(obj => obj.Id == id))
                     continue;
 
                 IGameObject obj;
@@ -223,7 +222,7 @@ public static class Game
                     continue;
                 }
 
-                place.GameObjects.Add(obj);
+                space.GameObjects.Add(obj);
             }
         }
 
@@ -233,17 +232,22 @@ public static class Game
     #endregion
 
     #region AddMethods
-    
+
     /// <summary>
     /// Добавление объекта сцены в игру.
     /// </summary>
     /// <param name="name">Уникальное имя.</param>
+    /// <param name="spaceName">Уникальное имя первого пространства в сцене.</param>
     /// <param name="scene">Сцена.</param>
-    public static void Add([NotNull] string name, [NotNull] IScene scene)
+    /// <exception cref="ArgumentNullException">Имя пространства равно null.</exception>
+    public static void Add([NotNull] string name, [NotNull] string spaceName, [NotNull] IScene scene)
     {
-        TryAddName(name, GameAssetType.Scene);
-        TryAddUId(scene, GameAssetType.Scene);
-        PrivateScenes.Add(name, scene);
+        if (string.IsNullOrEmpty(spaceName))
+            throw new ArgumentNullException(nameof(spaceName), "Space name was null.");
+        
+        Add(name, scene, GameAssetType.Scene);
+        Add(spaceName, scene.CurrentSpace, GameAssetType.Space);
+        scene.CurrentSpace.SceneOrSpaceName = name;
     }
 
     /// <summary>
@@ -251,21 +255,23 @@ public static class Game
     /// </summary>
     /// <param name="name">Уникальное имя.</param>
     /// <param name="space">Пространство.</param>
-    /// <param name="sceneOrSpaceName">Имя сцены или пространства, к которому должно быть привязано новое пространство.</param>
-    /// <exception cref="ArgumentException">Не существует сцены или пространства, к которому будет привязано новое пространство.</exception>
-    public static void Add([NotNull] string name, [NotNull] ISpace space, string sceneOrSpaceName)
+    /// <param name="spaceName">Имя сцены или пространства, к которому должно быть привязано новое пространство.</param>
+    /// <exception cref="ArgumentNullException">Имя привязанного пространства равно null.</exception>
+    /// <exception cref="ArgumentException">
+    /// Не существует сцены или пространства, к которому будет привязано новое пространство.
+    /// </exception>
+    public static void Add([NotNull] string name, [NotNull] string spaceName, [NotNull] ISpace space)
     {
-        if (PrivateSpaces.ContainsKey(sceneOrSpaceName))
-            PrivateSpaces[sceneOrSpaceName].NeighbourSpaces.Add(space);
-        else if (PrivateScenes.ContainsKey(sceneOrSpaceName))
-            PrivateScenes[sceneOrSpaceName].CurrentPlace = space;
-        else
-            throw new ArgumentException("Scene or space with this name doesn't exists.", nameof(sceneOrSpaceName));
+        if (string.IsNullOrEmpty(spaceName))
+            throw new ArgumentNullException(nameof(spaceName), "Linked space name was null.");
         
-        TryAddName(name, GameAssetType.Space);
-        TryAddUId(space, GameAssetType.Space);
-        PrivateSpaces.Add(name, space);
-        space.SceneOrSpaceName = sceneOrSpaceName;
+        if (PrivateSpaces.ContainsKey(spaceName))
+            PrivateSpaces[spaceName].NeighbourSpaces.Add(space);
+        else
+            throw new ArgumentException("Space with this name doesn't exists.", nameof(spaceName));
+        
+        Add(name, space, GameAssetType.Space);
+        space.SceneOrSpaceName = spaceName;
     }
     
     /// <summary>
@@ -274,18 +280,18 @@ public static class Game
     /// <param name="name">Уникальное имя.</param>
     /// <param name="obj">Игровой объект.</param>
     /// <param name="spaceName">Имя пространства, к которому будет привязан новый объект.</param>
+    /// <exception cref="ArgumentNullException">Имя пространства равно null.</exception>
     /// <exception cref="ArgumentException">Не существует пространства, к которому будет привязан новый объект.</exception>
-    public static void Add([NotNull] string name, [NotNull] IGameObject obj, [NotNull] string spaceName)
+    public static void Add([NotNull] string name, [NotNull] string spaceName, [NotNull] IGameObject obj)
     {
+        if (string.IsNullOrEmpty(spaceName))
+            throw new ArgumentNullException(nameof(spaceName), "Space name was null.");
         if (!PrivateSpaces.ContainsKey(spaceName))
             throw new ArgumentException("Space with this name doesn't exists.", nameof(spaceName));
         
-        TryAddName(name, GameAssetType.GameObject);
-        TryAddUId(obj, GameAssetType.GameObject);
+        Add(name, obj, GameAssetType.GameObject);
         PrivateSpaces[spaceName].GameObjects.Add(obj);
         obj.SpaceName = spaceName;
-        Objects.Add(name, obj);
-        LoadQueue.Add(obj);
     }
     
     /// <summary>
@@ -293,16 +299,16 @@ public static class Game
     /// </summary>
     /// <param name="name">Уникальное имя.</param>
     /// <param name="script">Скрипт.</param>
-    /// <param name="isFrameDependent">Истина, если скрипт должен выполняться в цикле, иначе скрипт будет выполняться вручную.</param>
+    /// <param name="isFrameDependent">
+    /// Истина, если скрипт должен выполняться в цикле, иначе скрипт будет выполняться при вызове функции Execute или
+    /// FixedExecute.
+    /// </param>
     public static void Add([NotNull] string name, [NotNull] IScript script, bool isFrameDependent = true)
     {
-        TryAddName(name, GameAssetType.Script);
-        TryAddUId(script, GameAssetType.Script);
+        Add(name, script, GameAssetType.Script);
         
         if (isFrameDependent)
             FrameScripts.Add(script);
-        
-        PrivateScripts.Add(name, script);
     }
 
     /// <summary>
@@ -310,52 +316,30 @@ public static class Game
     /// </summary>
     /// <param name="name">Уникальное имя.</param>
     /// <param name="trigger">Триггер.</param>
-    public static void Add([NotNull] string name, [NotNull] ITrigger trigger)
-    {
-        TryAddName(name, GameAssetType.Trigger);
-        TryAddUId(trigger, GameAssetType.Trigger);
-        PrivateTriggers.Add(name, trigger);
-    }
+    public static void Add([NotNull] string name, [NotNull] ITrigger trigger) => Add(name, trigger, GameAssetType.Trigger);
 
     /// <summary>
-    /// Добавление объекта ресурса в игру.
+    /// Добавление объекта ресурса в игру. Уже добавленные ресурсы можно добавить снова.
     /// </summary>
     /// <param name="name">Уникальное имя.</param>
     /// <param name="resource">Ресурс.</param>
-    /// <exception cref="ArgumentException">Ресурс с таким же путём до файла уже существует.</exception>
-    public static void Add([NotNull] string name, [NotNull] IResource resource)
-    {
-        if (PrivateResources.Select(pair => pair.Value.Path).Any(path => string.CompareOrdinal(path, resource.Path) == 0))
-            throw new ArgumentException("Resource with this path already exists.", nameof(resource));
-        
-        TryAddName(name, GameAssetType.Resource);
-        TryAddUId(resource, GameAssetType.Resource);
-        PrivateResources.Add(name, resource);
-    }
+    public static void Add([NotNull] string name, [NotNull] IResource resource) => 
+        Add(name, resource, GameAssetType.Resource);
 
     /// <summary>
     /// Добавление объекта модели в игру.
     /// </summary>
     /// <param name="name">Уникальное имя.</param>
     /// <param name="model">Модель.</param>
-    public static void Add([NotNull] string name, [NotNull] IModel model)
-    {
-        TryAddName(name, GameAssetType.Model);
-        TryAddUId(model, GameAssetType.Model);
-        PrivateModels.Add(name, model);
-    }
+    public static void Add([NotNull] string name, [NotNull] IModel model) => Add(name, model, GameAssetType.Model);
 
     /// <summary>
     /// Добавление объекта материала в игру.
     /// </summary>
     /// <param name="name">Уникальное имя.</param>
     /// <param name="material">Материал.</param>
-    public static void Add([NotNull] string name, [NotNull] IMaterial material)
-    {
-        TryAddName(name, GameAssetType.Model);
-        TryAddUId(material, GameAssetType.Model);
-        PrivateMaterials.Add(name, material);
-    }
+    public static void Add([NotNull] string name, [NotNull] IMaterial material) => 
+        Add(name, material, GameAssetType.Material);
 
     #endregion
 
@@ -394,7 +378,7 @@ public static class Game
         var type = UIds[id];
         UIds.Remove(id);
         IGameResource gameResource = null;
-        var name = string.Empty;
+        string name = null;
 
         foreach (DictionaryEntry entry in Lists[type])
         {
@@ -429,28 +413,28 @@ public static class Game
     {
         var paths = new[]
         {
-            Constants.ShaderVertColorPath, Constants.ShaderFragColorPath,
-            Constants.ShaderVertTexturePath, Constants.ShaderFragTexturePath,
-            Constants.ShaderVertLightPath, Constants.ShaderFragLightPath
+            (Constants.ShaderVertObjectPath, Constants.ShaderFragObjectPath),
+            (Constants.ShaderVertLinePath, Constants.ShaderFragLinePath)
         };
-        var types = new[]
-        {
-            BodyVisualType.Color, BodyVisualType.Texture, BodyVisualType.Light
-        };
+        var types = new[] { BodyVisualType.Object, BodyVisualType.Line };
 
         for (var i = 0; i < types.Length; ++i)
         {
-            var shader = new Shader(paths[i * 2], paths[i * 2 + 1]);
+            var shader = new Shader(paths[i].Item1, paths[i].Item2);
             Shaders.Add(types[i], shader);
         }
     }
 
-    private static void TryAddUId(IGameResource obj, GameAssetType type)
+    private static void Add(string name, IGameResource obj, GameAssetType type)
     {
-        while (UIds.ContainsKey(obj.Id))
-            obj.Id = new UId();
-
-        UIds.Add(obj.Id, type);
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentNullException(nameof(name), "Game resource name was null.");
+        if (obj is null)
+            throw new ArgumentNullException(nameof(obj), "Game resource was null.");
+        
+        TryAddName(name, type);
+        TryAddUId(obj, type);
+        Lists[type].Add(name, obj);
     }
     
     private static void TryAddName(string name, GameAssetType type)
@@ -459,5 +443,13 @@ public static class Game
             throw new ArgumentException("Object with this name already exists.", nameof(name));
 
         Names.Add(name, type);
+    }
+
+    private static void TryAddUId(IGameResource obj, GameAssetType type)
+    {
+        while (UIds.ContainsKey(obj.Id))
+            obj.Id = new UId();
+
+        UIds.Add(obj.Id, type);
     }
 }

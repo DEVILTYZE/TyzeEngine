@@ -15,6 +15,7 @@ namespace TyzeEngine;
 internal sealed class TyzeWindow : GameWindow
 {
     private ArrayObject _vectorObject;
+    private List<IScript> _scripts;
     
     // AUDIO
     private ALDevice _device;
@@ -27,19 +28,17 @@ internal sealed class TyzeWindow : GameWindow
 
     // PROPERTIES
     private IScene CurrentScene => Scenes?[CurrentSceneIndex];
-    private ISpace CurrentPlace => CurrentScene.CurrentPlace;
+    private ISpace CurrentSpace => CurrentScene.CurrentSpace;
 
     internal int CurrentSceneIndex { get; set; }
     internal IReadOnlyList<IScene> Scenes { get; set; }
-    internal IReadOnlyList<IScript> Scripts { get; set; }
-    internal TriggerHandler TriggerLoadObjects { get; }
+    internal IReadOnlyList<IScript> Scripts { get => _scripts; set => _scripts = value.ToList(); }
     internal TriggerHandler TriggerNextScene { get; }
     internal bool IsDebugMode { get; set; }
 
     internal TyzeWindow(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings) 
         : base(gameWindowSettings, nativeWindowSettings)
     {
-        TriggerLoadObjects += LoadObjects;
         VSync = VSyncMode.Off;
         
         // SHOW FPS настройки.
@@ -56,9 +55,7 @@ internal sealed class TyzeWindow : GameWindow
         GL.Enable(EnableCap.CullFace);
         GL.CullFace(CullFaceMode.Back);
         
-        CurrentScene.ReloadObjects = TriggerLoadObjects;
         CurrentScene.LoadSceneHandler = TriggerNextScene;
-        CursorState = CursorState.Grabbed;
         
         Game.SetShaders();
         Camera.Fov = 45;
@@ -66,10 +63,11 @@ internal sealed class TyzeWindow : GameWindow
 
         InitializeAudio();
         CurrentScene.Run();
-        LoadObjects();
+        Scripts.ToList().ForEach(script => script.Prepare());
         
-        foreach (var script in Scripts)
-            script.Prepare();
+        // При отладке идёт отображение векторов скоростей, сил и т.п.
+        if (IsDebugMode)
+            InitializeVectorObject();
         
         Game.StartFixedExecute();
     }
@@ -95,9 +93,7 @@ internal sealed class TyzeWindow : GameWindow
         if (Input.IsDown(KeyCode.Escape))
             Close();
 #endif
-        
-        foreach (var script in Scripts)
-            script.Execute();
+        _scripts.ForEach(script => script.Execute());
 
         // something...
     }
@@ -116,31 +112,16 @@ internal sealed class TyzeWindow : GameWindow
         ALC.MakeContextCurrent(ALContext.Null);
         ALC.DestroyContext(_context);
         ALC.CloseDevice(_device);
-
-        foreach (var (_, shader) in Game.Shaders)
-            shader.Dispose();
-        
-        foreach (var scene in Scenes)
-            scene.Dispose();
+        Game.Shaders.ToList().ForEach(pair => pair.Value.Dispose());
+        Scenes.ToList().ForEach(scene => scene.Dispose());
 
         base.OnUnload();
-    }
-    
-    private void LoadObjects()
-    {
-        // При отладке идёт отображение векторов скоростей, сил и т.п.
-        if (IsDebugMode)
-            InitializeVectorObject();
-        
-        // Загрузка объекта.
-        foreach (var obj in GetNewObjects())
-            obj.Load();
     }
 
     private void DrawObjects()
     {
-        var objects = new[] { CurrentPlace }.Concat(CurrentPlace.NeighbourSpaces).SelectMany(place => 
-            place.GameObjects).ToList();
+        var objects = new[] { CurrentSpace }.Concat(CurrentSpace.NeighbourSpaces).SelectMany(space => 
+            space.GameObjects).ToList();
         var objectList = objects.Where(obj => obj.Visual.Visibility is Visibility.Visible).ToList();
         var lights = objectList.Where(obj => obj.Visual.Type is BodyVisualType.Light).ToList();
         
@@ -148,11 +129,11 @@ internal sealed class TyzeWindow : GameWindow
         {
             obj.Draw(lights);
 
-            if (obj.Body is null)
+            if (!IsDebugMode) 
                 continue;
             
-            foreach (var vector in obj.Body.GetVectors()!)
-                DrawDebugVector(vector, obj);
+            obj.DrawLines();
+            obj.Body?.GetVectors().ForEach(vector => DrawDebugVector(vector, obj));
         }
 
         objectList = objects.Where(obj => 
@@ -160,14 +141,6 @@ internal sealed class TyzeWindow : GameWindow
             obj.Visual.Visibility is not Visibility.Collapsed && 
             obj.Body.IsEnabled).ToList();
         // PhysicsGenerator.DetermineCollision(objectList);
-    }
-
-    private IEnumerable<IGameObject> GetNewObjects()
-    {
-        var objects = LoadQueue.TakeObjects().ToArray();
-        CurrentScene.LoadResources();
-
-        return objects;
     }
 
     private void ShowFps(double time)
@@ -201,15 +174,14 @@ internal sealed class TyzeWindow : GameWindow
         if (vector == Vector3.Zero)
             return;
 
-        var shader = Game.Shaders[BodyVisualType.Color];
-        var scale = vector / Vector3.One;
-        var axis = Vector3.Cross(Vector3.One, vector);
-        var angle = Vector3.CalculateAngle(Vector3.One, vector);
+        var shader = Game.Shaders[BodyVisualType.Line];
+        var scale = vector.LengthFast * Vector3.One;
         var position = obj.Transform.Position;
         _vectorObject.Enable();
-        shader.SetMatrix4("model", GetMatrixParametrized(scale, axis * angle, position));
+        shader.SetMatrix4("model", GetMatrixParametrized(scale, Vector3.NormalizeFast(vector), position));
         shader.SetMatrix4("view", Camera.View);
         shader.SetMatrix4("projection", Camera.Projection);
+        shader.SetVector4("inColor", new Vector4(1, 1, 1, 1));
         _vectorObject.Draw(PrimitiveType.LineLoop, 0, 2);
         _vectorObject.Disable();
     }
@@ -219,31 +191,21 @@ internal sealed class TyzeWindow : GameWindow
         if (_vectorObject is not null)
             return;
         
-        var shader = Game.Shaders[BodyVisualType.Color];
+        var shader = Game.Shaders[BodyVisualType.Line];
         _vectorObject = new ArrayObject();
         _vectorObject.Enable();
         var startPosition = Vector.ToFloats(Vector3.Zero);
         var direction = Vector.ToFloats(Vector3.One);
-        var color = new Vector4(.5f, .1f, .2f, 1);
-        var colorFloats = Vector.ToFloats(color).ToArray();
-        var temp = new float[] { -1, -1 };
-        var vertices = startPosition.Concat(colorFloats).Concat(temp).Concat(direction).Concat(colorFloats).Concat(temp).ToArray();
+        var vertices = startPosition.Concat(direction).ToArray();
 
         var arrayBuffer = new BufferObject(BufferTarget.ArrayBuffer);
         arrayBuffer.SetData(vertices, BufferUsageHint.StaticDraw);
         _vectorObject.AttachBuffer(arrayBuffer);
-        
         var position = shader.GetAttributeLocation("aPosition");
-        var texture = shader.GetAttributeLocation("inTexture");
-        var colorPos = shader.GetAttributeLocation("inColor");
         
         arrayBuffer.Enable();
         _vectorObject.EnableAttribute(position, Constants.Vector3Length, VertexAttribPointerType.Float, 
-            Constants.VectorStride, 0);
-        _vectorObject.EnableAttribute(texture, Constants.Vector2Length, VertexAttribPointerType.Float, 
-            Constants.VectorStride, Constants.Vector3Stride);
-        _vectorObject.EnableAttribute(colorPos, Constants.Vector4Length, VertexAttribPointerType.Float, 
-            Constants.VectorStride, Constants.Vector3Stride + Constants.Vector2Stride);
+            Constants.Vector3Stride, 0);
         arrayBuffer.Disable();
     }
     

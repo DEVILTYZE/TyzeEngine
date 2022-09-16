@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using TyzeEngine.Interfaces;
 
@@ -34,19 +35,26 @@ public sealed class Space : ISpace
         var key = ((ISpace)this).SceneOrSpaceName;
 
         if (Game.Scenes.ContainsKey(key))
-            Game.Scenes[key].CurrentPlace = null;
+            Game.Scenes[key].CurrentSpace = NeighbourSpaces.FirstOrDefault(space => space is not null);
         else
             Game.Spaces[key].NeighbourSpaces.Remove(this);
     }
-
-    public static ISpace Find(string name)
+    
+    /// <summary>
+    /// Ищет пространство по имени среди всех добавленных в игру пространств.
+    /// </summary>
+    /// <param name="name">Имя пространства.</param>
+    /// <returns>Объект пространства, приведённый к типу ISpace.</returns>
+    /// <exception cref="ArgumentNullException">Имя равно null.</exception>
+    /// <exception cref="Exception">Пространство не найдено.</exception>
+    public static ISpace Find([NotNull] string name)
     {
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentNullException(nameof(name), "Name was null.");
+        
         var isFound = Game.Spaces.TryGetValue(name, out var value);
 
-        if (isFound)
-            return value;
-
-        throw new Exception("Place not found.");
+        return isFound ? value : throw new Exception("Space not found.");
     }
 
     private void ReleaseUnmanagedResources()
@@ -55,10 +63,7 @@ public sealed class Space : ISpace
             return;
 
         NeighbourSpaces = null;
-
-        foreach (var obj in GameObjects)
-            obj?.Dispose();
-
+        GameObjects.ForEach(obj => obj?.Dispose());
         _disposed = true;
     }
 }

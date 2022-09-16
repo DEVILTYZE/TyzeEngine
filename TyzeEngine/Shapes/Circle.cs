@@ -2,24 +2,24 @@
 using System.Collections.Generic;
 using System.Linq;
 using OpenTK.Mathematics;
-using TyzeEngine.Interfaces;
 using TyzeEngine.Objects;
 
 namespace TyzeEngine.Shapes;
 
 public class Circle : Model
 {
-    public Circle(float radius = 1, float angle = MathF.PI / 20) : base(GetModel(radius, angle))
+    public Circle(float radius = 1, float angle = MathF.PI / 20)
     {
+        SetModel(radius, angle);
+        base.SetModel();
     }
     
-    private static (List<Vector3>, List<Vector3>, IVectorArray, List<uint>) GetModel(float radius, float angle)
+    private void SetModel(float radius, float angle)
     {
-        var vertices = GetVertices(radius, angle);
-        var indices = GetIndices(vertices.Count - 1);
-        var normals = new List<Vector3>(Enumerable.Repeat(Vector3.UnitZ, vertices.Count));
-
-        return (vertices, normals, GetDefaultTexture(vertices), indices);
+        Vertices = GetVertices(radius, angle);
+        Indices = GetIndices(Vertices.Count - 1);
+        Normals = new List<Vector3>(Enumerable.Repeat(Vector3.UnitZ, Vertices.Count));
+        Texture = GetDefaultTexture(Vertices);
     }
 
     private static List<Vector3> GetVertices(float radius, float angle)

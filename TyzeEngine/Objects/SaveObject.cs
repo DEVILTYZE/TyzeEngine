@@ -11,7 +11,7 @@ namespace TyzeEngine.Objects;
 [Serializable]
 public struct SaveObject : ISaveable
 {
-    private int _lastPlaceId = 0;
+    private int _lastSpaceId = 0;
     private int _lastObjectId = 0;
     
     public int CurrentSceneIndex { get; set; }
@@ -27,11 +27,11 @@ public struct SaveObject : ISaveable
         ObjectStates = new SaveObjectState[objectsCount];
     }
 
-    public void AddPlaceObjects(ISpace space)
+    public void AddSpaceObjects(ISpace space)
     {
-        SpaceIds[_lastPlaceId] = space.Id;
-        SpaceObjects[_lastPlaceId] = space.GameObjects.Select(obj => obj.Id).ToArray();
-        ++_lastPlaceId;
+        SpaceIds[_lastSpaceId] = space.Id;
+        SpaceObjects[_lastSpaceId] = space.GameObjects.Select(obj => obj.Id).ToArray();
+        ++_lastSpaceId;
     }
 
     public void AddSaveObjectState(IGameObject obj)

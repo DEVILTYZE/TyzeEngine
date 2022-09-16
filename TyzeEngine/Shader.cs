@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
-using TyzeEngine.Interfaces;
+using TyzeEngine.Objects;
 
 namespace TyzeEngine;
 
@@ -82,7 +82,7 @@ internal sealed class Shader : IDisposable
         if (!IsEnabled)
             Enable();
         
-        GL.UniformMatrix3(_uniformLocations[name], true, ref matrix);
+        GL.UniformMatrix3(_uniformLocations[name], false, ref matrix);
     }
 
     internal void SetMatrix4(string name, Matrix4 matrix)
@@ -90,7 +90,7 @@ internal sealed class Shader : IDisposable
         if (!IsEnabled)
             Enable();
         
-        GL.UniformMatrix4(_uniformLocations[name], true, ref matrix);
+        GL.UniformMatrix4(_uniformLocations[name], false, ref matrix);
     }
     
     internal void SetVector3(string name, Vector3 vector)
@@ -109,14 +109,14 @@ internal sealed class Shader : IDisposable
         GL.Uniform4(_uniformLocations[name], vector);
     }
 
-    internal void SetLight(string name, ILight light)
+    internal void SetLight(string name, Lighting lighting)
     {
         if (!IsEnabled)
             Enable();
         
-        GL.Uniform1(_uniformLocations[$"{name}.ambient"], light.Ambient);
-        GL.Uniform1(_uniformLocations[$"{name}.specular"], light.Specular);
-        GL.Uniform1(_uniformLocations[$"{name}.shininess"], light.Shininess);
+        GL.Uniform1(_uniformLocations[$"{name}.ambient"], lighting.Ambient);
+        GL.Uniform1(_uniformLocations[$"{name}.specular"], lighting.Specular);
+        GL.Uniform1(_uniformLocations[$"{name}.shininess"], lighting.Shininess);
     }
 
     public void Dispose()

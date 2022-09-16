@@ -6,7 +6,8 @@ namespace TyzeEngine.Interfaces;
 
 public interface IModel : IDisposable, IGameResource
 {
-    IReadOnlyList<float> Array { get; }
+    internal ArrayObject ArrayObject { get; set; }
+    
     IReadOnlyList<Vector3> Vertices { get; }
     IEnumerable<Vector2> Vertices2D { get; }
     IReadOnlyList<uint> Indices { get; }
@@ -16,5 +17,6 @@ public interface IModel : IDisposable, IGameResource
     string Name { get; }
     bool Loaded { get; }
 
-    void Load();
+    void LoadFromFile();
+    internal void Load();
 }

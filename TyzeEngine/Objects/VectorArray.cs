@@ -68,8 +68,20 @@ public class VectorArray : IVectorArray
         _list.AddRange(new[] { x, y, z, w });
     }
 
-    public IEnumerable<float> this[int index] 
-        => new ArraySegment<float>(_list.ToArray(), index * Strides[Type], Strides[Type]).ToArray();
+    public IEnumerable<float> this[int index]
+    {
+        get
+        {
+            var stride = Strides[Type];
+
+            if ((index + 1) * stride > Length)
+                throw new IndexOutOfRangeException("Index was out of range.");
+            
+            for (var i = index * stride; i < (index + 1) * stride; ++i)
+                yield return _list[i];
+        }
+    }
+    //=> new ArraySegment<float>(_list.ToArray(), index * Strides[Type], Strides[Type]).ToArray();
     
     float[] IVectorArray.GetArray() => _list.ToArray();
 }

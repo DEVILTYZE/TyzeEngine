@@ -1,19 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using OpenTK.Mathematics;
-using TyzeEngine.Interfaces;
 using TyzeEngine.Objects;
 
 namespace TyzeEngine.Shapes;
 
 public class Sphere : Model
 {
-    public Sphere(float radius = 1, int sectorCount = 32, int stackCount = 32) 
-        : base(GetModel(radius, sectorCount, stackCount))
+    public Sphere(float radius = 1, int sectorCount = 32, int stackCount = 32)
     {
+        SetModel(radius, sectorCount, stackCount);
+        base.SetModel();
     }
-    
-    private static (List<Vector3>, List<Vector3>, IVectorArray, List<uint>) GetModel(float radius, int sectorCount, int stackCount)
+
+    private void SetModel(float radius, int sectorCount, int stackCount)
     {
         var vertices = new List<Vector3>();
         var indices = new List<uint>();
@@ -63,6 +63,9 @@ public class Sphere : Model
             }
         }
 
-        return (vertices, normals, texture, indices);
+        Vertices = vertices;
+        Normals = normals;
+        Texture = texture;
+        Indices = indices;
     }
 }

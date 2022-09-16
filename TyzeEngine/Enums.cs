@@ -20,9 +20,9 @@ public enum Visibility
 
 public enum BodyVisualType
 {
-    Color = 0,
-    Texture = 1,
-    Light = 2
+    Object = 0,
+    Light = 1,
+    Line = 2
 }
 
 public enum RunMode

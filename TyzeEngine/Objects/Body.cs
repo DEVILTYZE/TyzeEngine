@@ -51,7 +51,7 @@ public abstract class Body : IBody
 
     void IBody.SetMaterial(IMaterial material) => Material = material;
 
-    IEnumerable<Vector3> IBody.GetVectors() => new[] { Velocity, AngularVelocity, GravityForce, Force, Torque };
+    List<Vector3> IBody.GetVectors() => new() { Velocity, GravityForce, Force, Torque };
 
     protected abstract Body DeepClone();
 

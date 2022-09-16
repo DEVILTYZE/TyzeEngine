@@ -24,5 +24,5 @@ public interface IBody : IDeepCloneable<IBody>
     // PHYSICS
     void SetMassAndInertia(float mass, float inertia);
     internal void SetMaterial(IMaterial material);
-    internal IEnumerable<Vector3> GetVectors();
+    internal List<Vector3> GetVectors();
 }

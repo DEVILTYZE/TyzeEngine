@@ -8,16 +8,15 @@ namespace TyzeEngine.GameStructure;
 
 public interface IScene : IDisposable, IGameResource
 {
-    internal Task LoadingPlacesTask { get; }
+    internal Task LoadingSpacesTask { get; }
     
     bool LoadError { get; }
-    ISpace CurrentPlace { get; set; }
+    ISpace CurrentSpace { get; set; }
     SortedList<UId, IResource> Resources { get; }
     SortedList<UId, IModel> Models { get; }
-    TriggerHandler ReloadObjects { get; set; }
     TriggerHandler LoadSceneHandler { get; set; }
 
-    void LoadPlace(TriggeredEventArgs args);
-    void Run();
-    void LoadResources();
+    void LoadSpace(TriggeredEventArgs args);
+    internal void Run();
+    internal void LoadResources();
 }

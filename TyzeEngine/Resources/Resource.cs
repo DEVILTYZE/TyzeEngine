@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using TyzeEngine.Interfaces;
 
@@ -48,17 +49,24 @@ public abstract class Resource : IResource
         Disposed = true;
     }
     
-    public static IResource Find(string name)
+    /// <summary>
+    /// Ищет ресурс по имени среди всех добавленных в игру ресурсов.
+    /// </summary>
+    /// <param name="name">Имя ресурса.</param>
+    /// <returns>Объект ресурса, приведённый к типу IResource.</returns>
+    /// <exception cref="ArgumentNullException">Имя равно null.</exception>
+    /// <exception cref="Exception">Ресурс не найден.</exception>
+    public static IResource Find([NotNull] string name)
     {
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentNullException(nameof(name), "Name was null.");
+        
         var isFound = Game.Resources.TryGetValue(name, out var value);
 
-        if (isFound)
-            return value;
-
-        throw new Exception("Resource not found.");
+        return isFound ? value : throw new Exception("Resource not found.");
     }
     
-    public static IResource GetByPath(string path)
+    public static IResource CreateObject(string path)
     {
         var extension = System.IO.Path.GetExtension(path);
 

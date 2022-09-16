@@ -1,27 +1,28 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using OpenTK.Mathematics;
-using TyzeEngine.Interfaces;
 using TyzeEngine.Objects;
 
 namespace TyzeEngine.Shapes;
 
 public class Cube : Model
 {
-    public Cube(float size = 1) : base(GetModel(size))
+    public Cube(float size = 1)
     {
+        SetModel(size);
+        base.SetModel();
     }
     
-    private static (List<Vector3>, List<Vector3>, IVectorArray, List<uint>) GetModel(float size)
+    private void SetModel(float size)
     {
-        var vertices = GetVertices(size);
-        var indices = new List<uint>
+        Vertices = GetVertices(size);
+        Indices = new List<uint>
         {
             4, 2, 0, 2, 7, 3, 6, 5, 7, 1, 7, 5,
             0, 3, 1, 4, 1, 5, 4, 6, 2, 2, 6, 7,
             6, 4, 5, 1, 3, 7, 0, 2, 3, 4, 0, 1
         };
-        var texture = new VectorArray(new[]
+        Texture = new VectorArray(new[]
         {
             .875f, .5f, .625f, .75f, .625f, .5f, .625f, .75f, .375f, 1, .375f, .75f, .625f, 0, .375f, .25f, .375f, 0, 
             .375f, .5f, .125f, .75f, .125f, .5f, .625f, .5f, .375f, .75f, .375f, .5f, .625f, .25f, .375f, .5f, .375f, 
@@ -29,9 +30,7 @@ public class Cube : Model
             .25f, .375f, .5f, .375f, .75f, .125f, .75f, .625f, .5f, .625f, .75f, .375f, .75f, .625f, .25f, .625f, .5f,
             .375f, .5f
         }, ArrayType.TwoDimensions);
-        var normals = vertices.Select(Vector3.NormalizeFast).ToList();
-
-        return (vertices, normals, texture, indices);
+        Normals = Vertices.Select(Vector3.NormalizeFast).ToList();
     }
 
     private static List<Vector3> GetVertices(float size)

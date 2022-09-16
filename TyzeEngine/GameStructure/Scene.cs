@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using TyzeEngine.Interfaces;
@@ -10,9 +11,9 @@ namespace TyzeEngine.GameStructure;
 public sealed class Scene : IScene
 {
     private bool _loadError, _disposed;
-    private Task _loadingPlacesTask;
+    private Task _loadingSpacesTask;
 
-    Task IScene.LoadingPlacesTask => _loadingPlacesTask;
+    Task IScene.LoadingSpacesTask => _loadingSpacesTask;
 
     public UId Id { get; set; } = new();
     public bool LoadError
@@ -24,39 +25,35 @@ public sealed class Scene : IScene
 
             return value;
         }
-        private init => _loadError = value;
+        private set => _loadError = value;
     }
-    public ISpace CurrentPlace { get; set; }
+    public ISpace CurrentSpace { get; set; }
     public SortedList<UId, IResource> Resources { get; } = new();
     public SortedList<UId, IModel> Models { get; } = new();
     public TriggerHandler ReloadObjects { get; set; }
     public TriggerHandler LoadSceneHandler { get; set; }
     
-    public Scene(ISpace spawnPlace)
-    {
-        CurrentPlace = spawnPlace;
-        LoadError = false;
-    }
+    public Scene() => CurrentSpace = new Space();
 
     ~Scene() => ReleaseUnmanagedResources();
 
-    public void LoadPlace(TriggeredEventArgs args)
+    public void LoadSpace(TriggeredEventArgs args)
     {
-        if (_loadingPlacesTask is not null && _loadingPlacesTask.Status == TaskStatus.Running)
-            _loadingPlacesTask.Wait();
+        if (_loadingSpacesTask is not null && _loadingSpacesTask.Status == TaskStatus.Running)
+            _loadingSpacesTask.Wait();
         
-        _loadingPlacesTask = Task.Run(() => LoadPlace((int)args.Data));
+        _loadingSpacesTask = Task.Run(() => LoadSpace((int)args.Data));
     }
 
-    public void Run()
+    void IScene.Run()
     {
-        LoadResources();
-        LoadPlace(CurrentPlace.Id);
+        ((IScene)this).LoadResources();
+        LoadSpace(CurrentSpace.Id);
         
         // Other settings...
     }
 
-    public void LoadResources()
+    void IScene.LoadResources()
     {
         while (LoadQueue.HasNewResources)
         {
@@ -68,6 +65,10 @@ public sealed class Scene : IScene
         while (LoadQueue.HasNewModels)
         {
             var model = LoadQueue.TakeModel();
+            
+            if (!model.Loaded)
+                model.LoadFromFile();
+            
             model.Load();
             Models.Add(model.Id, model);
         }
@@ -83,80 +84,71 @@ public sealed class Scene : IScene
     {
     }
 
-    public static IScene Find(string name)
+    /// <summary>
+    /// Ищет сцену по имени среди всех добавленных в игру сцен.
+    /// </summary>
+    /// <param name="name">Имя сцены.</param>
+    /// <returns>Объект сцены, приведённый к типу IScene.</returns>
+    /// <exception cref="ArgumentNullException">Имя равно null.</exception>
+    /// <exception cref="Exception">Сцена не найдена.</exception>
+    public static IScene Find([NotNull] string name)
     {
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentNullException(nameof(name), "Name was null.");
+        
         var isFound = Game.Scenes.TryGetValue(name, out var value);
 
-        if (isFound)
-            return value;
-
-        throw new Exception("Scene not found.");
+        return isFound ? value : throw new Exception("Scene not found.");
     }
 
-    private void LoadPlace(object obj)
+    private void LoadSpace(object obj)
     {
         var id = (UId)obj;
-        ISpace place = null;
+        ISpace space = null;
 
-        if (CurrentPlace.Id != id)
+        if (CurrentSpace.Id != id)
         {
-            foreach (var neighbourPlace in CurrentPlace.NeighbourSpaces)
+            foreach (var neighbourSpace in CurrentSpace.NeighbourSpaces)
             {
-                if (neighbourPlace.Id != id)
+                if (neighbourSpace.Id != id)
                 {
-                    neighbourPlace.Dispose();
-                    neighbourPlace.Loaded = false;
+                    neighbourSpace.Dispose();
+                    neighbourSpace.Loaded = false;
                 }
                 else
                 {
-                    place = neighbourPlace;
+                    space = neighbourSpace;
                     break;
                 }
             }
 
-            if (place is null)
+            if (space is null)
                 return;
         }
         else
-            place = CurrentPlace;
+            space = CurrentSpace;
 
-        var resourceIds = new HashSet<UId>(place.GetResourceIds());
+        var resourceIds = new HashSet<UId>(space.GetResourceIds());
+        space.NeighbourSpaces
+            .Where(neighbourSpace => neighbourSpace.Loaded)
+            .SelectMany(neighbourSpace => neighbourSpace.GetResourceIds()).ToList()
+            .ForEach(localId => resourceIds.Add(localId));
 
-        foreach (var neighbourPlace in place.NeighbourSpaces)
-        {
-            if (neighbourPlace.Loaded)
-                continue;
-
-            foreach (var resource in neighbourPlace.GetResourceIds())
-                resourceIds.Add(resource);
-        }
-        
         LoadResources(resourceIds);
-        place.Loaded = true;
-
-        foreach (var neighbourPlace in place.NeighbourSpaces)
-            neighbourPlace.Loaded = true;
+        space.Loaded = true;
+        space.NeighbourSpaces.ForEach(localSpace => localSpace.Loaded = true);
     }
     
-    private void LoadResources(IEnumerable<UId> ids)
-    {
-        foreach (var id in ids)
-            Resources[id].Load();
-    }
+    private void LoadResources(IEnumerable<UId> ids) => ids.ToList().ForEach(id => Resources[id].Load());
 
     private void ReleaseUnmanagedResources()
     {
         if (_disposed)
             return;
         
-        var places = new[] { CurrentPlace }.Concat(CurrentPlace.NeighbourSpaces);
-
-        foreach (var place in places)
-            place?.Dispose();
-        
-        foreach (var (_, resource) in Resources)
-            resource?.Dispose();
-
+        var spaces = new List<ISpace>(new[] { CurrentSpace }.Concat(CurrentSpace.NeighbourSpaces));
+        spaces.ForEach(space => space?.Dispose());
+        Resources.ToList().ForEach(pair => pair.Value?.Dispose());
         _disposed = true;
     }
 }
