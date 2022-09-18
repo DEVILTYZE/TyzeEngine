@@ -3,31 +3,23 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using OpenTK.Graphics.OpenGL4;
+using Assimp;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
+using PrimitiveType = OpenTK.Graphics.OpenGL4.PrimitiveType;
 
 namespace TyzeEngine.Objects;
 
 public class Model : IModel
 {
     private bool _disposed;
-    private float[] _array;
+    private List<IMesh> _meshes = new();
 
-    protected IVectorArray Texture = new VectorArray();
-    protected List<uint> LineIndices = new();
-
-    ArrayObject IModel.ArrayObject { get; set; }
-    
     public UId Id { get; set; } = new();
-    public IReadOnlyList<Vector3> Vertices { get; protected set; }
-    public IEnumerable<Vector2> Vertices2D => Vertices.Select(vertex => vertex.Xy).ToArray();
-    public IReadOnlyList<uint> Indices { get; protected set; }
-    public IEnumerable<float> TextureCoordinates => Texture.GetArray();
-    public IReadOnlyList<Vector3> Normals { get; protected set; }
+    public IReadOnlyList<IMesh> Meshes { get => _meshes; protected set => _meshes = value.ToList(); }
     public string Directory { get; private set; }
     public string Name { get; private set; }
-    public bool Loaded => _array is not null;
+    public bool Loaded => Meshes is not null && Meshes.Count > 0;
 
     public Model(string name, string directory = Constants.ModelsDirectory)
     {
@@ -46,18 +38,19 @@ public class Model : IModel
         if (Loaded)
             return;
 
-        string[] text;
+        var path = Directory + Name;
 
-        if (!File.Exists(Directory + Name))
+        if (!File.Exists(path))
             throw new FileNotFoundException("Model file not found.", Directory + Name);
-        
-        using (var sr = new StreamReader(Directory + Name))
-        {
-            text = sr.ReadToEnd().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        }
 
-        // foreach (var str in text)
-        //     ParseWavefrontString(str);
+        using var importer = new AssimpContext();
+        var scene = importer.ImportFile(path, PostProcessSteps.Triangulate | PostProcessSteps.FlipUVs);
+
+        if (scene is null || scene.SceneFlags == SceneFlags.Incomplete || scene.RootNode is null)
+            throw new Exception($"Import model error.");
+            
+        ProcessNode(scene.RootNode, scene);
+        _meshes.ForEach(mesh => mesh.SetMesh());
     }
 
     public void Dispose()
@@ -66,44 +59,9 @@ public class Model : IModel
         GC.SuppressFinalize(this);
     }
 
-    void IModel.Load()
-    {
-        var arrayObject = ((IModel)this).ArrayObject;
-        
-        if (arrayObject is not null)
-            return;
-        
-        var shader = Game.Shaders[BodyVisualType.Object];
-        shader.Enable();
-        arrayObject = new ArrayObject();
-        ((IModel)this).ArrayObject = arrayObject;
-        
-        // Создание буферa для векторного представления.
-        var arrayBuffer = new BufferObject(BufferTarget.ArrayBuffer);
-        arrayBuffer.SetData(_array, BufferUsageHint.StaticDraw);
-        arrayObject.AttachBuffer(arrayBuffer);
-        
-        // Получение индексов для трёх атрибутов (позиция, текстура и цвет).
-        const int stride = Constants.Vector3Stride * 2 + Constants.Vector2Stride;
-        var position = shader.GetAttributeLocation("aPosition");
-        var normal = shader.GetAttributeLocation("inNormal");
-        var texture = shader.GetAttributeLocation("inTexture");
-        arrayBuffer.Enable();
-        arrayObject.EnableAttribute(position, Constants.Vector3Length, VertexAttribPointerType.Float, 
-            stride, 0);
-        arrayObject.EnableAttribute(normal, Constants.Vector3Length, VertexAttribPointerType.Float, 
-            stride, Constants.Vector3Stride);
-        arrayObject.EnableAttribute(texture, Constants.Vector2Length, VertexAttribPointerType.Float, 
-            stride, Constants.Vector3Stride * 2);
-        arrayBuffer.Disable();
-        
-        // Создание буфера для Element object.
-        var elementBuffer = new BufferObject(BufferTarget.ElementArrayBuffer);
-        elementBuffer.SetData(Indices.ToArray(), BufferUsageHint.StaticDraw);
-        arrayObject.AttachBuffer(elementBuffer);
-        arrayObject.Disable();
-        shader.Disable();
-    }
+    void IModel.Load() => _meshes.ForEach(mesh => mesh.Load());
+    
+    void IModel.Draw(PrimitiveType type) => _meshes.ForEach(mesh => mesh.Draw(type));
 
     /// <summary>
     /// Ищет модель по имени среди всех добавленных в игру моделей.
@@ -139,28 +97,45 @@ public class Model : IModel
     {
     }
 
-    protected void SetModel()
+    private void ProcessNode(Node node, Scene scene)
     {
-        if (Vertices is null)
-            throw new NullReferenceException("Vertices list is null.");
-        if (Normals is null)
-            throw new NullReferenceException("Normals list is null.");
-        if (Texture is null)
-            throw new NullReferenceException("Texture coordinates list is null.");
-        if (Indices is null)
-            throw new NullReferenceException("Indices list is null.");
+        for (var i = 0; i < node.MeshCount; ++i)
+        {
+            var mesh = scene.Meshes[node.MeshIndices[i]];
+            _meshes.Add(ProcessMesh(mesh));
+        }
         
-        if (Vertices.Count == 0 || Normals.Count == 0 || Texture.Length == 0)
-            throw new Exception("Vertices count is zero.");
-        if (Normals.Count == 0)
-            throw new Exception("Normals count is zero.");
-        if (Texture.Length == 0)
-            throw new Exception("Texture coordinates count is zero.");
-        if (Indices.Count == 0)
-            throw new Exception("Indices count is zero.");
+        for (var i = 0; i < node.ChildCount; ++i)
+            ProcessNode(node.Children[i], scene);
+    }
+
+    private static IMesh ProcessMesh(Assimp.Mesh mesh)
+    {
+        var vertices = new List<Vector3>();
+        var normals = new List<Vector3>();
+        var texture = new VectorArray();
+        var currentTexture = mesh.TextureCoordinateChannels is null
+            ? new List<Vector3D>(0)
+            : mesh.TextureCoordinateChannels[0];
+        var indices = new List<uint>();
+        mesh.Faces.SelectMany(face => face.Indices).ToList().ForEach(index => indices.Add((uint)index));
+
+        for (var i = 0; i < mesh.VertexCount; ++i)
+        {
+            vertices.Add(new Vector3(mesh.Vertices[i].X, mesh.Vertices[i].Y, mesh.Vertices[i].Z));
+            normals.Add(new Vector3(mesh.Normals[i].X, mesh.Normals[i].Y, mesh.Normals[i].Z));
+            
+            if (i < currentTexture.Count)
+                texture.Add(currentTexture[i].X, currentTexture[i].Y);
+        }
         
-        Normals = Normals.Select(Vector3.NormalizeFast).ToList();
-        MixArrays();
+        return new Mesh
+        {
+            Vertices = vertices,
+            Normals = normals,
+            Texture = texture,
+            Indices = indices
+        };
     }
 
     private void Dispose(bool disposing)
@@ -168,66 +143,13 @@ public class Model : IModel
         if (_disposed)
             return;
 
-        ReleaseUnmanagedResources();
-        
         if (disposing)
         {
-            Vertices = null;
-            Normals = null;
-            Indices = null;
-            Texture = null;
+            Meshes.ToList().ForEach(mesh => mesh.Dispose());
             Directory = null;
             Name = null;
         }
 
         _disposed = true;
     }
-    
-    private void ReleaseUnmanagedResources() => ((IModel)this).ArrayObject?.Dispose();
-
-    private void MixArrays()
-    {
-        var result = new List<float>();
-
-        for (var i = 0; i < Vertices.Count; ++i)
-        {
-            result.AddRange(new[] { Vertices[i].X, Vertices[i].Y, Vertices[i].Z });
-            result.AddRange(new[] { Normals[i].X, Normals[i].Y, Normals[i].Z });
-            result.AddRange(Texture[i]);
-        }
-
-        _array = result.ToArray();
-    }
-
-    // private void ParseWavefrontString(string str)
-    // {
-    //     var parts = str.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-    //     const string vertex = "v";
-    //     const string texture = "vt";
-    //     const string normal = "vn";
-    //     const string space = "vp";
-    //     const string index = "f";
-    //
-    //     switch (parts[0])
-    //     {
-    //         case vertex:
-    //             var value = parts[1..].Select(float.Parse).ToArray();
-    //             _vertices.Add(new Vector3(value[0], value[1], value[2]));
-    //             break;
-    //         case texture:
-    //             value = parts[1..].Select(float.Parse).ToArray();
-    //             _texture.Add(value[0], value[1]);
-    //             break;
-    //         case index:
-    //             var indexValue = parts[1..]
-    //                 .Select(localStr => localStr.Split('/', StringSplitOptions.RemoveEmptyEntries))
-    //                 .SelectMany(localStr => localStr).Select(uint.Parse);
-    //             _indices.AddRange(indexValue);
-    //             break;
-    //         case normal: // На будущее...
-    //             break;
-    //         case space:
-    //             break;
-    //     }
-    // }
 }

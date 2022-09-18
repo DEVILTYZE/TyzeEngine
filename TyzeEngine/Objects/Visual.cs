@@ -19,15 +19,13 @@ public class Visual : IVisual
             _color = new Color4(_color.R, _color.G, _color.B, 0);
         }
     }
-    public Lighting Light { get; set; } = Lighting.Default;
     public Visibility Visibility { get; set; } = Visibility.Visible;
-    public BodyVisualType Type { get; set; } = BodyVisualType.Object;
+    public BodyVisualType Type { get; protected internal set; } = BodyVisualType.Object;
 
     public IVisual Clone() => new Visual
     {
-        Color = Color,
         Texture = Texture,
-        Light = Light,
+        Color = Color,
         Visibility = Visibility,
         Type = Type
     };

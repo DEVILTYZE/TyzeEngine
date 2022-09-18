@@ -123,7 +123,8 @@ internal sealed class TyzeWindow : GameWindow
         var objects = new[] { CurrentSpace }.Concat(CurrentSpace.NeighbourSpaces).SelectMany(space => 
             space.GameObjects).ToList();
         var objectList = objects.Where(obj => obj.Visual.Visibility is Visibility.Visible).ToList();
-        var lights = objectList.Where(obj => obj.Visual.Type is BodyVisualType.Light).ToList();
+        var lights = objectList.Where(obj => obj.Visual.Type is BodyVisualType.Light)
+            .Cast<LightObject>().ToArray();
         
         foreach (var obj in objectList)
         {

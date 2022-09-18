@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using TyzeEngine.Objects;
 
 namespace TyzeEngine.Interfaces;
 
@@ -13,6 +14,6 @@ public interface IGameObject : IDisposable, IDeepCloneable<IGameObject>, IGameRe
     IVisual Visual { get; }
     bool SaveStatus { get; set; }
 
-    internal void Draw(IEnumerable<IGameObject> lights);
+    internal void Draw(LightObject[] lights);
     internal void DrawLines();
 }

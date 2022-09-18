@@ -63,6 +63,7 @@ public static class Game
     public const string StandardSceneName = "StandardScene";
     /// <summary> Стандартное имя пространства, которое изначально находится в игре. </summary>
     public const string StandardSpaceName = "StandardSpace";
+    public const string StandardWorldLightName = "StandardWorldLight";
 
     #endregion
 
@@ -80,6 +81,8 @@ public static class Game
             { GameAssetType.Material, PrivateMaterials }
         };
         Add(StandardSceneName, StandardSpaceName, new Scene());
+        var light = new DirectionLight();
+        Add(StandardWorldLightName, StandardSpaceName, light);
     }
 
     /// <summary>
@@ -178,7 +181,7 @@ public static class Game
             obj.Transform.Rotation = Vector.ToVector3(state.Rotation);
             obj.Visual.Color = Color4.FromXyz(Vector.ToVector4(state.Color));
             obj.Visual.Visibility = (Visibility)state.VisibilityType;
-            obj.Visual.Type = (BodyVisualType)state.Visual;
+            ((Visual)obj.Visual).Type = (BodyVisualType)state.Visual;
             obj.Body.CollisionLayer = state.CollisionLayer;
             //obj.Body.SetMaterial(BytesToMaterial(state.Material));
             obj.Body.Force = Vector.ToVector3(state.Force);
@@ -331,7 +334,11 @@ public static class Game
     /// </summary>
     /// <param name="name">Уникальное имя.</param>
     /// <param name="model">Модель.</param>
-    public static void Add([NotNull] string name, [NotNull] IModel model) => Add(name, model, GameAssetType.Model);
+    public static void Add([NotNull] string name, [NotNull] IModel model)
+    {
+        Add(name, model, GameAssetType.Model);
+        LoadQueue.Add(model);
+    }
 
     /// <summary>
     /// Добавление объекта материала в игру.

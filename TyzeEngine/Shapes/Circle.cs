@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using OpenTK.Mathematics;
+using TyzeEngine.Interfaces;
 using TyzeEngine.Objects;
 
 namespace TyzeEngine.Shapes;
@@ -10,16 +10,20 @@ public class Circle : Model
 {
     public Circle(float radius = 1, float angle = MathF.PI / 20)
     {
-        SetModel(radius, angle);
-        base.SetModel();
-    }
-    
-    private void SetModel(float radius, float angle)
-    {
-        Vertices = GetVertices(radius, angle);
-        Indices = GetIndices(Vertices.Count - 1);
-        Normals = new List<Vector3>(Enumerable.Repeat(Vector3.UnitZ, Vertices.Count));
-        Texture = GetDefaultTexture(Vertices);
+        var vertices = GetVertices(radius, angle);
+        var indices = GetIndices(vertices.Count - 1);
+        var normals = new List<Vector3>(vertices);
+        var texture = GetDefaultTexture(vertices);
+        
+        var mesh = new Mesh
+        {
+            Vertices = vertices,
+            Indices = indices,
+            Normals = normals,
+            Texture = texture,
+        };
+        ((IMesh)mesh).SetMesh();
+        Meshes = new List<IMesh> { mesh };
     }
 
     private static List<Vector3> GetVertices(float radius, float angle)

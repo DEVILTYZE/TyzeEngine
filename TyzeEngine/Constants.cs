@@ -24,6 +24,7 @@ internal static class Constants
     internal const string SaveExtension = ".sav";
     
     // DEFAULT VALUES
+    internal const int MaxLightCount = 32;
     internal const double FixedTimeLimit = .01;
     internal const float YawDefault = -45;
     internal const float FowDefault = 45;

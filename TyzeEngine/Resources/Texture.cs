@@ -10,9 +10,12 @@ public sealed class Texture : Resource
 {
     public bool IsEnabled { get; private set; }
     public TextureUnit Unit { get; set; }
+    public float Shininess { get; set; }
+    public int UnitNumber => (int)Unit - (int)TextureUnit.Texture0;
 
     public Texture(string path) : base(path)
     {
+        Shininess = 32;
         Unit = TextureUnit.Texture0;
         IsEnabled = false;
     }

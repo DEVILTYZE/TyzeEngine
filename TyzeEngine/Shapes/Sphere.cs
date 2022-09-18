@@ -1,17 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using OpenTK.Mathematics;
+using TyzeEngine.Interfaces;
 using TyzeEngine.Objects;
 
 namespace TyzeEngine.Shapes;
 
 public class Sphere : Model
 {
-    public Sphere(float radius = 1, int sectorCount = 32, int stackCount = 32)
-    {
-        SetModel(radius, sectorCount, stackCount);
-        base.SetModel();
-    }
+    public Sphere(float radius = 1, int sectorCount = 32, int stackCount = 32) => SetModel(radius, sectorCount, stackCount);
 
     private void SetModel(float radius, int sectorCount, int stackCount)
     {
@@ -63,9 +60,14 @@ public class Sphere : Model
             }
         }
 
-        Vertices = vertices;
-        Normals = normals;
-        Texture = texture;
-        Indices = indices;
+        var mesh = new Mesh
+        {
+            Vertices = vertices,
+            Normals = normals,
+            Texture = texture,
+            Indices = indices
+        };
+        ((IMesh)mesh).SetMesh();
+        Meshes = new List<IMesh> { mesh };
     }
 }

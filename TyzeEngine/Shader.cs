@@ -5,6 +5,7 @@ using System.Text;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using TyzeEngine.Objects;
+using TyzeEngine.Resources;
 
 namespace TyzeEngine;
 
@@ -41,7 +42,7 @@ internal sealed class Shader : IDisposable
 
         if (errorCode != (int)All.True)
         {
-            Error = GL.GetProgramInfoLog(vertexShader);
+            Error = GL.GetProgramInfoLog(Handle);
             throw new Exception($"Shader program link error: {Error}");
         }
         
@@ -109,14 +110,56 @@ internal sealed class Shader : IDisposable
         GL.Uniform4(_uniformLocations[name], vector);
     }
 
-    internal void SetLight(string name, Lighting lighting)
+    internal void SetInt(string name, int value)
     {
         if (!IsEnabled)
             Enable();
         
-        GL.Uniform1(_uniformLocations[$"{name}.ambient"], lighting.Ambient);
-        GL.Uniform1(_uniformLocations[$"{name}.specular"], lighting.Specular);
-        GL.Uniform1(_uniformLocations[$"{name}.shininess"], lighting.Shininess);
+        GL.Uniform1(_uniformLocations[name], value);
+    }
+
+    internal void SetLight(string name, LightObject lightObject, Matrix4 viewMatrix)
+    {
+        if (!IsEnabled)
+            Enable();
+        
+        GL.Uniform3(_uniformLocations[$"{name}.ambient"], lightObject.Ambient);
+        GL.Uniform3(_uniformLocations[$"{name}.diffuse"], lightObject.Diffuse);
+        GL.Uniform3(_uniformLocations[$"{name}.specular"], lightObject.Specular);
+
+        if (name.StartsWith("dir"))
+        {
+            var directionLight = (DirectionLight)lightObject;
+            GL.Uniform3(_uniformLocations[$"{name}.direction"], directionLight.Direction);
+        }
+        else if (name.StartsWith("point"))
+        {
+            var pointLight = (PointLight)lightObject;
+            var position = new Vector4(pointLight.Transform.Position) * viewMatrix;
+            GL.Uniform3(_uniformLocations[$"{name}.position"], new Vector3(position));
+            GL.Uniform1(_uniformLocations[$"{name}.constant"], pointLight.Constant);
+            GL.Uniform1(_uniformLocations[$"{name}.linear"], pointLight.Linear);
+            GL.Uniform1(_uniformLocations[$"{name}.quadratic"], pointLight.Quadratic);
+        }
+        else if (name.StartsWith("spot"))
+        {
+            var spotLight = (SpotLight)lightObject;
+            var position = new Vector4(spotLight.Transform.Position) * viewMatrix;
+            GL.Uniform3(_uniformLocations[$"{name}.position"], new Vector3(position));
+            GL.Uniform3(_uniformLocations[$"{name}.direction"], spotLight.Direction);
+            GL.Uniform1(_uniformLocations[$"{name}.cutOff"], spotLight.CutOff);
+            GL.Uniform1(_uniformLocations[$"{name}.outerCutOff"], spotLight.OuterCutOff);
+        }
+    }
+
+    internal void SetTexture(string name, Texture texture)
+    {
+        var unit = texture?.UnitNumber ?? -1;
+        var shininess = texture?.Shininess ?? 32;
+        
+        GL.Uniform1(_uniformLocations[$"{name}.diffuse"], unit);
+        GL.Uniform1(_uniformLocations[$"{name}.specular"], unit);
+        GL.Uniform1(_uniformLocations[$"{name}.shininess"], shininess);
     }
 
     public void Dispose()

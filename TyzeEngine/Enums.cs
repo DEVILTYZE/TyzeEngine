@@ -179,6 +179,14 @@ public enum ButtonCode
     AdditionalButton5 = MouseButton.Button8
 }
 
+internal enum LightType
+{
+    Undefined = -1,
+    Direction = 0,
+    Point = 1,
+    SpotLight = 2
+}
+
 internal enum GameAssetType
 {
     Scene = 0,

@@ -8,7 +8,6 @@ public interface IVisual : IDeepCloneable<IVisual>
 {
     Color4 Color { get; set; }
     IResource Texture { get; set; }
-    Lighting Light { get; set; }
     Visibility Visibility { get; set; }
-    BodyVisualType Type { get; set; }
+    BodyVisualType Type { get; }
 }
