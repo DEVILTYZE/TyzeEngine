@@ -1,13 +1,13 @@
 ﻿using System.Collections.Generic;
 using OpenTK.Mathematics;
-using TyzeEngine.Materials;
+using TyzeEngine.Interfaces;
 
-namespace TyzeEngine.Interfaces;
+namespace TyzeEngine.Physics;
 
 public interface IBody : IDeepCloneable<IBody>
 {
-    // PHYSICS
-    ushort CollisionLayer { get; set; }
+    int CollisionLayer { get; set; }
+    int Dimension { get; }
     IMaterial Material { get; }
     float Mass { get; }
     float InverseMass { get; }
@@ -19,10 +19,10 @@ public interface IBody : IDeepCloneable<IBody>
     Vector3 AngularVelocity { get; set; }
     Vector3 Force { get; set; }
     Vector3 GravityForce { get; set; }
+    bool TakesGravityForce { get; set; }
     bool IsEnabled { get; set; }
-
-    // PHYSICS
+    
+    CollisionPoints TestCollision(ITransform transform, IBody body, ITransform bodyTransform);
     void SetMassAndInertia(float mass, float inertia);
-    internal void SetMaterial(IMaterial material);
     internal List<Vector3> GetVectors();
 }

@@ -14,6 +14,7 @@ public abstract class Resource : IResource
     public int Handle { get; protected set; } = -1;
     public string Path { get; private set; }
     public bool LoadError { get; protected set; }
+    public bool Loaded => Handle != Constants.ErrorCode;
 
     protected Resource(string path) => Path = path;
 
@@ -65,7 +66,19 @@ public abstract class Resource : IResource
 
         return isFound ? value : throw new Exception("Resource not found.");
     }
-    
+
+    public static bool IsExists([NotNull] string filePath, out string name)
+    {
+        if (string.IsNullOrEmpty(filePath))
+            throw new ArgumentNullException(nameof(filePath), "File path was null.");
+
+        var pair = Game.Resources.FirstOrDefault(pair => string.CompareOrdinal(pair.Value.Path, filePath) == 0);
+        var isFound = pair.Equals(default);
+        name = isFound ? System.IO.Path.GetFileNameWithoutExtension(filePath) : pair.Key; 
+        
+        return isFound;
+    }
+
     public static IResource CreateObject(string path)
     {
         var extension = System.IO.Path.GetExtension(path);

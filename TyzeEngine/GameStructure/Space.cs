@@ -25,11 +25,6 @@ public sealed class Space : ISpace
         GC.SuppressFinalize(this);
     }
     
-    IEnumerable<UId> ISpace.GetResourceIds() 
-        => from texture in GameObjects.Select(obj => obj.Visual.Texture) 
-            where texture is not null 
-            select texture.Id;
-    
     void IGameResource.Remove()
     {
         var key = ((ISpace)this).SceneOrSpaceName;
@@ -63,7 +58,6 @@ public sealed class Space : ISpace
             return;
 
         NeighbourSpaces = null;
-        GameObjects.ForEach(obj => obj?.Dispose());
         _disposed = true;
     }
 }

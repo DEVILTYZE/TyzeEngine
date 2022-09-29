@@ -1,21 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using OpenTK.Mathematics;
-using TyzeEngine.Interfaces;
-using TyzeEngine.Objects;
+using TyzeEngine.Resources;
 
 namespace TyzeEngine.Shapes;
 
 public class Sphere : Model
 {
-    public Sphere(float radius = 1, int sectorCount = 32, int stackCount = 32) => SetModel(radius, sectorCount, stackCount);
+    public Sphere(float radius = 1, int sectorCount = 64, int stackCount = 64) => 
+        SetModel(radius, sectorCount, stackCount);
 
     private void SetModel(float radius, int sectorCount, int stackCount)
     {
         var vertices = new List<Vector3>();
         var indices = new List<uint>();
-        // var lineIndices = new List<uint>();
-        var texture = new VectorArray();
+        var texture = new List<Vector2>();
         var normals = new List<Vector3>();
 
         var sectorStep = MathF.Tau / sectorCount;
@@ -35,7 +34,7 @@ public class Sphere : Model
                 var y = xy * MathF.Sin(sectorAngle);
                 vertices.Add(new Vector3(x, y, z));
                 normals.Add(new Vector3(x * length, y * length, z * length));
-                texture.Add(j / (float)sectorCount, i / (float)stackCount);
+                texture.Add(new Vector2(j / (float)sectorCount, i / (float)stackCount));
             }
         }
 
@@ -51,23 +50,17 @@ public class Sphere : Model
                 
                 if (i != stackCount - 1)
                     indices.AddRange(new[] { k1 + 1, k2, k2 + 1 });
-                
-                // lineIndices.Add(k1);
-                // lineIndices.Add(k2);
-                //
-                // if (i != 0)
-                //     lineIndices.AddRange(new[] { k1, k1 + 1 });
             }
         }
 
-        var mesh = new Mesh
+        IMesh mesh = new Mesh(RootNode)
         {
             Vertices = vertices,
             Normals = normals,
-            Texture = texture,
+            TextureCoordinates = texture,
             Indices = indices
         };
-        ((IMesh)mesh).SetMesh();
-        Meshes = new List<IMesh> { mesh };
+        mesh.SetMesh(3);
+        RootNode.Meshes.Add(mesh);
     }
 }

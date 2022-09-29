@@ -12,6 +12,7 @@ public sealed class Texture : Resource
     public TextureUnit Unit { get; set; }
     public float Shininess { get; set; }
     public int UnitNumber => (int)Unit - (int)TextureUnit.Texture0;
+    public bool IsDiffuse => Shininess == 0;
 
     public Texture(string path) : base(path)
     {
@@ -24,7 +25,11 @@ public sealed class Texture : Resource
     
     public override void Load()
     {
+        if (Loaded)
+            return;
+        
         Handle = GL.GenTexture();
+        GL.ActiveTexture(TextureUnit.Texture0);
         Enable();
         
         Image<Rgba32> image;
@@ -57,14 +62,16 @@ public sealed class Texture : Resource
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
         
         GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
+        Disable();
     }
+
+    public void Activate() => GL.ActiveTexture(Unit);
 
     public override void Enable()
     {
         if (Handle == Constants.ErrorCode)
             Load();
         
-        GL.ActiveTexture(Unit);
         GL.BindTexture(TextureTarget.Texture2D, Handle);
         IsEnabled = true;
     }

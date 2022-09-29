@@ -2,7 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using TyzeEngine.Interfaces;
 
-namespace TyzeEngine.Materials;
+namespace TyzeEngine.Physics;
 
 public abstract class Material : IMaterial
 {

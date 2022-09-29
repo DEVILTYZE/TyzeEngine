@@ -11,12 +11,12 @@ out vec3 fragmentPosition;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
-uniform mat3 normalMatrix;
+uniform mat4 normalMatrix;
 
 void main() 
 {
     gl_Position = projection * view * model * vec4(aPosition, 1.0);
-	fragmentPosition = vec3(view * model * vec4(aPosition, 1.0));
-	normal = normalize(normalMatrix * inNormal);
+	fragmentPosition = vec3(model * vec4(aPosition, 1.0));
+	normal = normalize(mat3(transpose(normalMatrix)) * inNormal);
     textureCoordinates = inTexture;
 }

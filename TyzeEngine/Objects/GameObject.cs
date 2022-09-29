@@ -2,60 +2,59 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
+using TyzeEngine.Physics;
 using TyzeEngine.Resources;
 
 namespace TyzeEngine.Objects;
 
-public abstract class GameObject : IGameObject
+public class GameObject : IGameObject
 {
-    private bool _disposed;
-
     string IGameObject.SpaceName { get; set; }
-    
+
     public UId Id { get; set; } = new();
     public IModel Model { get; set; }
     public IBody Body { get; set; }
     public ITransform Transform { get; private set; }
-    public IVisual Visual { get; private set; }
+    // Нулевой цвет даёт возможность изначально отображать текстуру, если цвет не задан.
+    public Color4 Color { get; set; } = Constants.NullColor;
+    public Visibility Visibility { get; set; } = Visibility.Visible;
+    public BodyVisualType VisualType { get; protected internal set; } = BodyVisualType.Object;
+    public bool CullFace { get; set; } = true;
     public bool SaveStatus { get; set; }
+    public bool IsTrigger { get; set; }
+    public CollisionHandler OnCollision { get; set; }
 
-    protected GameObject()
+    public GameObject() => Transform = new Transform();
+
+    public CollisionPoints TestCollision(ITransform transform, IGameObject obj, ITransform bodyTransform)
     {
-        Transform = new Transform();
-        Visual = new Visual();
+        var points = Body.TestCollision(transform, obj.Body, bodyTransform);
+
+        return points.IsCollides ? Model.TestCollision(transform, obj.Model, bodyTransform) : CollisionPoints.NonCollides;
     }
 
-    ~GameObject() => Dispose(false);
+    public override string ToString() => 
+        $"{GetType().Name} | {Model.GetType().Name}: {Id.ShortValue}\r\n" + 
+        $"{Transform}\r\nClr: {Color}\r\nVis: {Visibility}" +
+        (Body is null ? "\r\nBody is null" : $"\r\n + {Body.GetType().Name}");
 
-    public override string ToString()
-        => $"{GetType().Name}: {Id}\r\n" +
-           string.Join(' ', Transform.Position) + "\r\n" +
-           string.Join(' ', Transform.Scale) + "\r\n" +
-           string.Join(' ', Transform.Rotation) + "\r\n" +
-           string.Join(' ', Visual.Color) + "\r\n" +
-           string.Join(' ', Visual.Visibility);
+    public virtual IGameObject Clone(IGameObject obj = null)
+    {
+        var currentObj = (GameObject)obj ?? new GameObject();
+        currentObj.Body = Body?.Clone();
+        currentObj.Transform = Transform.Clone();
+        currentObj.Model = Model;
+        currentObj.Color = Color;
+        currentObj.Visibility = Visibility;
+        currentObj.VisualType = VisualType;
+        currentObj.SaveStatus = SaveStatus;
+        currentObj.CullFace = CullFace;
+
+        return currentObj;
+    }
     
-    public IGameObject Clone()
-    {
-        var obj = DeepClone();
-        obj.Body = Body?.Clone();
-        obj.Transform = Transform.Clone();
-        obj.Model = Model;
-        obj.Visual = Visual.Clone();
-        obj.SaveStatus = SaveStatus;
-
-        return obj;
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
     /// <summary>
     /// Ищет игровой объект по имени среди всех добавленных в игру игровых объектов.
     /// </summary>
@@ -73,128 +72,50 @@ public abstract class GameObject : IGameObject
         return isFound ? value : throw new Exception("GameObject not found.");
     }
 
-    public static IEnumerable<IGameObject> FindOrDefault(Predicate<IGameObject> predicate)
-    {
-        foreach (var (_, obj) in Game.GameObjects.Where(pair => predicate.Invoke(pair.Value)))
-            yield return obj;
-    }
+    public static IEnumerable<IGameObject> GetAll() => Game.GameObjects.Select(pair => pair.Value);
 
-    void IGameObject.Draw(LightObject[] lights)
+    void IGameObject.Draw(List<ILightObject> lights)
     {
-        int pointCount = 0, spotLightCount = 0;
-        var shader = Game.Shaders[BodyVisualType.Object];
-        var modelMatrix = GetModelMatrix();
-        var viewMatrix = Camera.View;
-        shader.Enable();
-
-        if (Model is null)
+        if (Model is null || Visibility != Visibility.Visible)
             return;
-        
+
+        var count = new[] { 0, 0 };
+        var modelMatrix = Transform.ModelMatrix;
+        var viewMatrix = Camera.View;
+        var shader = Game.Shaders[BodyVisualType.Object];
+        shader.Enable();
         shader.SetMatrix4("model", modelMatrix);
         shader.SetMatrix4("view", viewMatrix);
         shader.SetMatrix4("projection", Camera.Projection);
+        shader.SetVector4("inColor", Vector.ToVector4(Color));
+        shader.SetVector3("viewPos", Camera.Position);
 
-        if (Visual.Type == BodyVisualType.Object)
+        if (VisualType == BodyVisualType.Object)
         {
-            shader.SetMatrix3("normalMatrix", new Matrix3(Matrix4.Transpose((viewMatrix * modelMatrix).Inverted())));
-            shader.SetVector4("inColor", Vector.ToVector4(Visual.Color));
-
-            foreach (var lightObject in lights)
-            {
-                switch (lightObject)
-                {
-                    case DirectionLight:
-                        shader.SetLight($"dirLight", lightObject, viewMatrix);
-                        break;
-                    case PointLight:
-                        shader.SetLight($"pointLight[{pointCount}]", lightObject, viewMatrix);
-                        ++pointCount;
-
-                        if (pointCount > Constants.MaxLightCount)
-                            throw new Exception("Point lights count bigger than max value.");
-                        break;
-                    case SpotLight:
-                        shader.SetLight($"spotLight[{spotLightCount}]", lightObject, viewMatrix);
-                        ++spotLightCount;
-
-                        if (spotLightCount > Constants.MaxLightCount)
-                            throw new Exception("Spotlights count bigger than max value.");
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(lightObject), "Light type error.");
-                }
-            }
-
-            shader.SetInt("pointLightCount", pointCount);
-            shader.SetInt("spotLightCount", spotLightCount);
-            shader.SetTexture("material", (Texture)Visual.Texture);
+            lights.ForEach(light => shader.SetLight(light.GetName(count), light));
+            shader.SetMatrix4("normalMatrix", modelMatrix.Inverted());
+            shader.SetInt("dirCount", count[0]);
+            shader.SetInt("pointCount", count[1]);
         }
         
-        Visual.Texture?.Enable();
-        Model.Draw(PrimitiveType.Triangles);
-        Visual.Texture?.Disable();
+        Model.Draw(shader);
         shader.Disable();
     }
 
     void IGameObject.DrawLines()
     {
-        var shader = Game.Shaders[BodyVisualType.Line];
-        shader.Enable();
-
         if (Model is null)
             return;
         
-        shader.SetMatrix4("model", GetModelMatrix());
+        var shader = Game.Shaders[BodyVisualType.Line];
+        shader.Enable();
+        shader.SetMatrix4("model", Transform.ModelMatrix);
         shader.SetMatrix4("view", Camera.View);
         shader.SetMatrix4("projection", Camera.Projection);
         shader.SetVector4("inColor", new Vector4(1, 0, 0, 1));
-        
-        Model.Draw(PrimitiveType.LineLoop);
+        Model.DrawLines();
         shader.Disable();
     }
 
-    void IGameResource.Remove()
-    {
-        var space = Game.Spaces[((IGameObject)this).SpaceName];
-        space.GameObjects.Remove(this);
-    }
-
-    protected abstract GameObject DeepClone();
-
-    private Matrix4 GetModelMatrix()
-    {
-        if (Body is null)
-            return Transform.ModelMatrix;
-
-        var time = FrameTimeState.RenderTime;
-        // SCALE
-        var scale = Matrix4.Identity * Transform.ScaleMatrix;
-            
-        // ROTATION
-        var angularAcceleration = Body.Torque * Body.InverseInertia;
-        Body.AngularVelocity += angularAcceleration * time;
-        Transform.Rotation += Body.AngularVelocity * time;
-        var rotation = scale * Transform.RotationMatrix;
-
-        // TRANSLATION
-        var acceleration = Body.Force * Body.InverseMass + Body.GravityForce;
-        Body.Velocity += acceleration * time;
-        Transform.Position += Body.Velocity * time;
-            
-        return rotation * Transform.TranslationMatrix;
-    }
-
-    private void Dispose(bool disposing)
-    {
-        if (_disposed)
-            return;
-
-        if (disposing)
-        {
-            Body = null;
-            Transform = null;
-        }
-
-        _disposed = true;
-    }
+    void IGameResource.Remove() => Game.Spaces[((IGameObject)this).SpaceName].GameObjects.Remove(this);
 }

@@ -7,12 +7,13 @@ public static class Camera
 {
     private static bool _isInverted, _isFirstFrame = true;
     private static Vector2 _lastPos;
-    private static Vector3 _direction, _up;
+    private static Vector3 _up;
     private static float _pitch, _yaw, _fov, _invertedControlCoef = 1, _aspectRatio;
-    private static Vector3 Right => Vector3.Cross(_direction, _up);
+    private static Vector3 Right => Vector3.Cross(Direction, _up);
 
     public static Vector3 Position { get; set; }
-    public static Matrix4 View => Matrix4.LookAt(Position, Position + _direction, _up);
+    public static Vector3 Direction { get; private set; }
+    public static Matrix4 View => Matrix4.LookAt(Position, Position + Direction, _up);
     public static Matrix4 Projection => Matrix4.CreatePerspectiveFieldOfView(_fov, _aspectRatio, .01f, 100);
     
     public static float Pitch
@@ -67,9 +68,9 @@ public static class Camera
         var speedAtTime = speed * time;
         
         if (Input.IsDown(KeyCode.W) || Input.IsDown(KeyCode.Up))
-            Position += _direction * speedAtTime;
+            Position += Direction * speedAtTime;
         else if (Input.IsDown(KeyCode.S) || Input.IsDown(KeyCode.Down))
-            Position -= _direction * speedAtTime;
+            Position -= Direction * speedAtTime;
         if (Input.IsDown(KeyCode.D) || Input.IsDown(KeyCode.Right))
             Position += Right * speedAtTime;
         else if (Input.IsDown(KeyCode.A) || Input.IsDown(KeyCode.Left))
@@ -102,15 +103,15 @@ public static class Camera
     public static void FocusToWorldCenter()
     {
         // VECTORS
-        _direction = Vector3.NormalizeFast(Vector3.Zero - Position);
-        var right = Vector3.NormalizeFast(Vector3.Cross(_direction, -Vector3.UnitY));
-        _up = Vector3.NormalizeFast(Vector3.Cross(_direction, right));
+        Direction = Vector3.NormalizeFast(Vector3.Zero - Position);
+        var right = Vector3.NormalizeFast(Vector3.Cross(Direction, -Vector3.UnitY));
+        _up = Vector3.NormalizeFast(Vector3.Cross(Direction, right));
         
         // ANGLES
-        _pitch = MathF.Asin(_direction.Y);
-        var angle = Vector3.CalculateAngle(Vector3.UnitZ, -_direction);
+        _pitch = MathF.Asin(Direction.Y);
+        var angle = Vector3.CalculateAngle(Vector3.UnitZ, -Direction);
 
-        if (_direction.X < 0)
+        if (Direction.X < 0)
             angle *= -1;
         
         _yaw = angle - MathHelper.PiOver2;
@@ -134,8 +135,8 @@ public static class Camera
         var y = MathF.Sin(_pitch);
         var z = pitchCos * MathF.Sin(_yaw);
         
-        _direction = Vector3.NormalizeFast(new Vector3(x, y, z));
-        var right = Vector3.NormalizeFast(Vector3.Cross(_direction, -Vector3.UnitY));
-        _up = Vector3.NormalizeFast(Vector3.Cross(_direction, right));
+        Direction = Vector3.NormalizeFast(new Vector3(x, y, z));
+        var right = Vector3.NormalizeFast(Vector3.Cross(Direction, -Vector3.UnitY));
+        _up = Vector3.NormalizeFast(Vector3.Cross(Direction, right));
     }
 }

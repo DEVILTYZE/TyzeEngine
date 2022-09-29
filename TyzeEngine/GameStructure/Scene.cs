@@ -28,9 +28,7 @@ public sealed class Scene : IScene
         private set => _loadError = value;
     }
     public ISpace CurrentSpace { get; set; }
-    public SortedList<UId, IResource> Resources { get; } = new();
     public SortedList<UId, IModel> Models { get; } = new();
-    public TriggerHandler ReloadObjects { get; set; }
     public TriggerHandler LoadSceneHandler { get; set; }
     
     public Scene() => CurrentSpace = new Space();
@@ -42,7 +40,7 @@ public sealed class Scene : IScene
         if (_loadingSpacesTask is not null && _loadingSpacesTask.Status == TaskStatus.Running)
             _loadingSpacesTask.Wait();
         
-        _loadingSpacesTask = Task.Run(() => LoadSpace((int)args.Data));
+        _loadingSpacesTask = Task.Run(() => LoadSpace(args.ObjectId));
     }
 
     void IScene.Run()
@@ -55,13 +53,6 @@ public sealed class Scene : IScene
 
     void IScene.LoadResources()
     {
-        while (LoadQueue.HasNewResources)
-        {
-            var resource = LoadQueue.TakeResource();
-            resource.Load();
-            Resources.Add(resource.Id, resource);
-        }
-
         while (LoadQueue.HasNewModels)
         {
             var model = LoadQueue.TakeModel();
@@ -73,6 +64,9 @@ public sealed class Scene : IScene
             Models.Add(model.Id, model);
         }
     }
+
+    IReadOnlyList<IGameObject> IScene.GetCurrentGameObjects() =>
+        new[] { CurrentSpace }.Concat(CurrentSpace.NeighbourSpaces).SelectMany(space => space.GameObjects).ToList();
 
     public void Dispose()
     {
@@ -123,23 +117,17 @@ public sealed class Scene : IScene
             }
 
             if (space is null)
+            {
+                LoadError = true;
                 return;
+            }
         }
         else
             space = CurrentSpace;
 
-        var resourceIds = new HashSet<UId>(space.GetResourceIds());
-        space.NeighbourSpaces
-            .Where(neighbourSpace => neighbourSpace.Loaded)
-            .SelectMany(neighbourSpace => neighbourSpace.GetResourceIds()).ToList()
-            .ForEach(localId => resourceIds.Add(localId));
-
-        LoadResources(resourceIds);
         space.Loaded = true;
         space.NeighbourSpaces.ForEach(localSpace => localSpace.Loaded = true);
     }
-    
-    private void LoadResources(IEnumerable<UId> ids) => ids.ToList().ForEach(id => Resources[id].Load());
 
     private void ReleaseUnmanagedResources()
     {
@@ -148,7 +136,7 @@ public sealed class Scene : IScene
         
         var spaces = new List<ISpace>(new[] { CurrentSpace }.Concat(CurrentSpace.NeighbourSpaces));
         spaces.ForEach(space => space?.Dispose());
-        Resources.ToList().ForEach(pair => pair.Value?.Dispose());
+        Models.ToList().ForEach(pair => pair.Value?.Dispose());
         _disposed = true;
     }
 }

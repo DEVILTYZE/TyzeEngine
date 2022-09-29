@@ -39,7 +39,7 @@ internal sealed class ArrayObject : IDisposable
     internal void AttachBuffer(BufferObject buffer)
     {
         if (!IsEnabled)
-            Enable();
+            throw new Exception("Array object is not enabled.");
         
         if (!buffer.IsEnabled)
             buffer.Enable();
@@ -64,7 +64,7 @@ internal sealed class ArrayObject : IDisposable
     internal void Draw(PrimitiveType primitive, int first, int count)
     {
         if (!IsEnabled)
-            Enable();
+            throw new Exception("Array object is not enabled.");
 
         GL.DrawArrays(primitive, first, count);
         Disable();
@@ -73,7 +73,7 @@ internal sealed class ArrayObject : IDisposable
     internal void Draw(PrimitiveType primitive, int startIndex, int count, DrawElementsType type)
     {
         if (!IsEnabled)
-            Enable();
+            throw new Exception("Array object is not enabled.");
 
         GL.DrawElements(primitive, count, type, startIndex);
         Disable();

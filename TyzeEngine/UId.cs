@@ -12,12 +12,25 @@ public readonly struct UId : IEquatable<UId>, IComparable<UId>, ISaveable
 
     public static ref readonly UId Default => ref DefaultUid;
     public ulong Value { get; }
+    public short ShortValue { get; }
 
-    public UId() => Value = Generate();
+    public UId()
+    {
+        Value = Generate();
+        ShortValue = GetShortValue(Value);
+    }
 
-    public UId(ulong value) => Value = value;
+    public UId(ulong value)
+    {
+        Value = value;
+        ShortValue = GetShortValue(Value);
+    }
 
-    public UId(long value) => Value = value < 0 ? long.MaxValue + (ulong)-value : (ulong)value;
+    public UId(long value)
+    {
+        Value = value < 0 ? long.MaxValue + (ulong)-value : (ulong)value;
+        ShortValue = GetShortValue(Value);
+    }
 
     public UId(uint value) : this((ulong)value)
     {
@@ -50,15 +63,17 @@ public readonly struct UId : IEquatable<UId>, IComparable<UId>, ISaveable
         if (isParsed)
         {
             Value = longValue < 0 ? long.MaxValue + (ulong)-longValue : (ulong)longValue;
+            ShortValue = GetShortValue(Value);
             return;
         }
 
         isParsed = ulong.TryParse(value, out var ulongValue);
-        
-        if (isParsed)
-            Value = ulongValue;
 
-        throw new ArgumentException("Wrong number type.", nameof(value));
+        if (!isParsed) 
+            throw new ArgumentException("Wrong number type.", nameof(value));
+        
+        Value = ulongValue;
+        ShortValue = GetShortValue(Value);
     }
 
     public bool Equals(UId other) => Value == other.Value;
@@ -79,9 +94,11 @@ public readonly struct UId : IEquatable<UId>, IComparable<UId>, ISaveable
 
     public static UId GetByBytes(byte[] data) => JsonSerializer.Deserialize<UId>(data);
 
+    private static short GetShortValue(ulong value) => (short)(value % 10000);
+
     private static ulong Generate()
     {
-        var buffer = new byte[8];
+        var buffer = new byte[sizeof(long)];
         Random.NextBytes(buffer);
 
         return BitConverter.ToUInt64(buffer);

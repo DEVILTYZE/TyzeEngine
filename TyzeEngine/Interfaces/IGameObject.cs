@@ -1,19 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using TyzeEngine.Objects;
+﻿using System.Collections.Generic;
+using OpenTK.Mathematics;
+using TyzeEngine.Physics;
+using TyzeEngine.Resources;
 
 namespace TyzeEngine.Interfaces;
 
-public interface IGameObject : IDisposable, IDeepCloneable<IGameObject>, IGameResource
+public interface IGameObject : IDeepCloneable<IGameObject>, IGameResource
 {
     internal string SpaceName { get; set; }
     
     IModel Model { get; set; }
     IBody Body { get; set; }
     ITransform Transform { get; }
-    IVisual Visual { get; }
+    Color4 Color { get; set; }
+    Visibility Visibility { get; set; }
+    BodyVisualType VisualType { get; }
+    bool CullFace { get; set; }
     bool SaveStatus { get; set; }
-
-    internal void Draw(LightObject[] lights);
+    bool IsTrigger { get; set; }
+    CollisionHandler OnCollision { get; set; }
+    
+    CollisionPoints TestCollision(ITransform transform, IGameObject obj, ITransform bodyTransform);
+    internal void Draw(List<ILightObject> lights);
     internal void DrawLines();
 }

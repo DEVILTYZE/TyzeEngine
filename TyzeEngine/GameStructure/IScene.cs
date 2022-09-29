@@ -12,11 +12,11 @@ public interface IScene : IDisposable, IGameResource
     
     bool LoadError { get; }
     ISpace CurrentSpace { get; set; }
-    SortedList<UId, IResource> Resources { get; }
     SortedList<UId, IModel> Models { get; }
     TriggerHandler LoadSceneHandler { get; set; }
 
     void LoadSpace(TriggeredEventArgs args);
     internal void Run();
     internal void LoadResources();
+    internal IReadOnlyList<IGameObject> GetCurrentGameObjects();
 }

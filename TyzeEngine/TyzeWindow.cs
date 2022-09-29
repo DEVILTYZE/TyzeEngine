@@ -15,7 +15,6 @@ namespace TyzeEngine;
 internal sealed class TyzeWindow : GameWindow
 {
     private ArrayObject _vectorObject;
-    private List<IScript> _scripts;
     
     // AUDIO
     private ALDevice _device;
@@ -28,19 +27,17 @@ internal sealed class TyzeWindow : GameWindow
 
     // PROPERTIES
     private IScene CurrentScene => Scenes?[CurrentSceneIndex];
-    private ISpace CurrentSpace => CurrentScene.CurrentSpace;
 
     internal int CurrentSceneIndex { get; set; }
     internal IReadOnlyList<IScene> Scenes { get; set; }
-    internal IReadOnlyList<IScript> Scripts { get => _scripts; set => _scripts = value.ToList(); }
+    internal IReadOnlyList<IScript> Scripts { get; set; }
     internal TriggerHandler TriggerNextScene { get; }
-    internal bool IsDebugMode { get; set; }
 
     internal TyzeWindow(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings) 
         : base(gameWindowSettings, nativeWindowSettings)
     {
         VSync = VSyncMode.Off;
-        
+
         // SHOW FPS настройки.
         _title = nativeWindowSettings.Title;
         Input.SetStates(KeyboardState, MouseState);
@@ -53,21 +50,24 @@ internal sealed class TyzeWindow : GameWindow
         GL.ClearColor(Constants.DarkSpaceColor);
         GL.Enable(EnableCap.DepthTest);
         GL.Enable(EnableCap.CullFace);
-        GL.CullFace(CullFaceMode.Back);
         
         CurrentScene.LoadSceneHandler = TriggerNextScene;
-        
         Game.SetShaders();
         Camera.Fov = 45;
         Camera.SetAspectRatio(Size.X / (float)Size.Y);
-
         InitializeAudio();
         CurrentScene.Run();
-        Scripts.ToList().ForEach(script => script.Prepare());
+        Scripts.ToList().ForEach(script => script.PrepareScript());
         
         // При отладке идёт отображение векторов скоростей, сил и т.п.
-        if (IsDebugMode)
+        if (Game.Settings.RunMode == RunMode.Debug)
             InitializeVectorObject();
+
+        if (Game.Settings.AntiAliasing)
+        {
+            GL.Enable(EnableCap.Multisample);
+            GL.Hint(HintTarget.MultisampleFilterHintNv, HintMode.Nicest);
+        }
         
         Game.StartFixedExecute();
     }
@@ -93,7 +93,9 @@ internal sealed class TyzeWindow : GameWindow
         if (Input.IsDown(KeyCode.Escape))
             Close();
 #endif
-        _scripts.ForEach(script => script.Execute());
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < Scripts.Count; i++)
+            Scripts[i].ExecuteScript();
 
         // something...
     }
@@ -120,28 +122,22 @@ internal sealed class TyzeWindow : GameWindow
 
     private void DrawObjects()
     {
-        var objects = new[] { CurrentSpace }.Concat(CurrentSpace.NeighbourSpaces).SelectMany(space => 
-            space.GameObjects).ToList();
-        var objectList = objects.Where(obj => obj.Visual.Visibility is Visibility.Visible).ToList();
-        var lights = objectList.Where(obj => obj.Visual.Type is BodyVisualType.Light)
-            .Cast<LightObject>().ToArray();
+        var objects = CurrentScene.GetCurrentGameObjects();
+        var lights = objects.Where(obj => obj.VisualType is BodyVisualType.Light)
+            .Cast<ILightObject>().ToList();
         
-        foreach (var obj in objectList)
+        foreach (var obj in objects)
         {
             obj.Draw(lights);
 
-            if (!IsDebugMode) 
+            if (Game.Settings.RunMode != RunMode.Debug) 
                 continue;
             
             obj.DrawLines();
             obj.Body?.GetVectors().ForEach(vector => DrawDebugVector(vector, obj));
         }
 
-        objectList = objects.Where(obj => 
-            obj.Body is not null && 
-            obj.Visual.Visibility is not Visibility.Collapsed && 
-            obj.Body.IsEnabled).ToList();
-        // PhysicsGenerator.DetermineCollision(objectList);
+        Game.PhysicsWorld.Step(objects);
     }
 
     private void ShowFps(double time)

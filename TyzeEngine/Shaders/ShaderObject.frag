@@ -1,5 +1,6 @@
 ﻿#version 330 core
-#define NR_LIGHTS 32
+#define LIGHTS_CNT_MAX 32
+#define LIGHTS_CNT 2
 
 in vec2 textureCoordinates;
 in vec3 normal;
@@ -9,8 +10,14 @@ out vec4 outputColor;
 
 struct Material
 {
-	sampler2D diffuse;
-	sampler2D specular;
+	sampler2D diffuse0;
+	sampler2D diffuse1;
+	sampler2D diffuse2;
+	sampler2D diffuse3;
+	sampler2D specular0;
+	sampler2D specular1;
+	sampler2D specular2;
+	sampler2D specular3;
 	float shininess;
 };
 
@@ -49,13 +56,14 @@ struct SpotLight
 	vec3 specular;
 };
 
+uniform vec3 viewPos;
 uniform sampler2D textureColor;
 uniform vec4 inColor;
-uniform int pointLightCount;
-uniform int spotLightCount;
+uniform int dirCount;
+uniform int pointCount;
 uniform DirectionLight dirLight;
-uniform PointLight pointLight[NR_LIGHTS];
-uniform SpotLight spotLight[NR_LIGHTS];
+uniform PointLight[LIGHTS_CNT_MAX] pointLight;
+uniform SpotLight[LIGHTS_CNT_MAX] spotLight;
 uniform Material material;
 
 vec3 CalcDirectionLight(DirectionLight light, vec3 normal, vec3 viewDirection, vec3 diffColor, vec3 specColor)
@@ -117,6 +125,7 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragmentPosition, vec3 vie
 	vec3 reflectDir = reflect(-lightDir, normal);
 	float spec = pow(max(dot(viewDirection, reflectDir), 0.0), material.shininess);
 	
+	// result
 	vec3 ambient = light.ambient * vec3(diffColor);
 	vec3 diffuse = light.diffuse * diff * vec3(diffColor);
 	vec3 specular = light.specular * spec * vec3(specColor);
@@ -133,17 +142,17 @@ void main()
 	
 	if (inColor.w == 0)
 	{
-		diffuseColor = vec3(texture(material.diffuse, textureCoordinates));
-		specularColor = vec3(texture(material.specular, textureCoordinates));
+		diffuseColor = vec3(texture(material.diffuse0, textureCoordinates));
+		specularColor = vec3(texture(material.specular0, textureCoordinates));
 	}
 	
-	vec3 viewDirection = normalize(-fragmentPosition);
+	vec3 viewDirection = normalize(viewPos - fragmentPosition);
 	vec3 resultColor = CalcDirectionLight(dirLight, normal, viewDirection, diffuseColor, specularColor);
 	
-	for (int i = 0; i < pointLightCount; ++i)
+	for (int i = 0; i < dirCount; ++i)
 		resultColor += CalcPointLight(pointLight[i], normal, fragmentPosition, viewDirection, diffuseColor, specularColor);
 
-	for (int i = 0; i < spotLightCount; ++i)
+	for (int i = 0; i < pointCount; ++i)
 		resultColor += CalcSpotLight(spotLight[i], normal, fragmentPosition, viewDirection, diffuseColor, specularColor);
 	
 	outputColor = vec4(resultColor, 1.0);

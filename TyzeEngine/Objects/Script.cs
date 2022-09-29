@@ -8,11 +8,17 @@ public abstract class Script : IScript
 {
     public UId Id { get; set; } = new();
 
-    public abstract void Prepare();
+    void IScript.PrepareScript() => Prepare();
+
+    void IScript.ExecuteScript() => Execute();
+
+    void IScript.FixedExecuteScript() => FixedExecute();
+
+    protected abstract void Prepare();
     
-    public abstract void Execute();
+    protected abstract void Execute();
     
-    public abstract void FixedExecute();
+    protected abstract void FixedExecute();
 
     void IGameResource.Remove()
     {

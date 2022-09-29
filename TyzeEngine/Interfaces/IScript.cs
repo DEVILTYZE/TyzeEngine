@@ -2,7 +2,7 @@
 
 public interface IScript : IGameResource
 {
-    void Prepare();
-    void Execute();
-    void FixedExecute();
+    internal void PrepareScript();
+    internal void ExecuteScript();
+    internal void FixedExecuteScript();
 }

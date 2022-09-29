@@ -31,14 +31,11 @@ public class Transform : ITransform
 
     public Transform()
     {
-        Scale = Constants.DefaultSize2D;
+        Scale = Constants.DefaultSize;
         Rotation = Constants.DefaultRotation;
     }
-    
-    public ITransform Clone() => new Transform
-    {
-        Position = Position,
-        _scale = Scale,
-        Rotation = Rotation
-    };
+
+    public ITransform Clone(ITransform obj = null) => (ITransform)MemberwiseClone();
+
+    public override string ToString() => $"P: {Position}; S: {Scale}; R: {Rotation}";
 }

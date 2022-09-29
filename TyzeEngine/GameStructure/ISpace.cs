@@ -11,6 +11,4 @@ public interface ISpace : IDisposable, IGameResource
     List<ISpace> NeighbourSpaces { get; set; }
     List<IGameObject> GameObjects { get; set; }
     bool Loaded { get; set; }
-
-    internal IEnumerable<UId> GetResourceIds();
 }

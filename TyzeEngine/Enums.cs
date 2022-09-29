@@ -179,22 +179,20 @@ public enum ButtonCode
     AdditionalButton5 = MouseButton.Button8
 }
 
-internal enum LightType
+public enum LightType
 {
-    Undefined = -1,
     Direction = 0,
     Point = 1,
     SpotLight = 2
 }
 
-internal enum GameAssetType
+internal enum GameResourceType
 {
     Scene = 0,
     Space = 1,
     GameObject = 2,
     Script = 3,
-    Trigger = 4,
-    Resource = 5,
-    Model = 6,
-    Material = 7
+    Resource = 4,
+    Model = 5,
+    Material = 6
 }

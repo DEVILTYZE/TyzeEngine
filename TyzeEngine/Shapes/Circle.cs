@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using OpenTK.Mathematics;
-using TyzeEngine.Interfaces;
-using TyzeEngine.Objects;
+using TyzeEngine.Resources;
 
 namespace TyzeEngine.Shapes;
 
@@ -11,19 +11,15 @@ public class Circle : Model
     public Circle(float radius = 1, float angle = MathF.PI / 20)
     {
         var vertices = GetVertices(radius, angle);
-        var indices = GetIndices(vertices.Count - 1);
-        var normals = new List<Vector3>(vertices);
-        var texture = GetDefaultTexture(vertices);
-        
-        var mesh = new Mesh
+        IMesh mesh = new Mesh(RootNode)
         {
             Vertices = vertices,
-            Indices = indices,
-            Normals = normals,
-            Texture = texture,
+            Indices = GetIndices(vertices.Count - 1),
+            Normals = Enumerable.Repeat(-Vector3.UnitZ, vertices.Count).ToList(),
+            TextureCoordinates = GetDefaultTexture(vertices),
         };
-        ((IMesh)mesh).SetMesh();
-        Meshes = new List<IMesh> { mesh };
+        mesh.SetMesh(2);
+        RootNode.Meshes.Add(mesh);
     }
 
     private static List<Vector3> GetVertices(float radius, float angle)

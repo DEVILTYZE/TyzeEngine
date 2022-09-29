@@ -1,6 +1,6 @@
 ﻿using TyzeEngine.Interfaces;
 
-namespace TyzeEngine.Materials;
+namespace TyzeEngine.Physics;
 
 public interface IMaterial : IGameResource
 {

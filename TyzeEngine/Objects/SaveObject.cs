@@ -4,7 +4,7 @@ using System.Text.Json;
 using OpenTK.Mathematics;
 using TyzeEngine.GameStructure;
 using TyzeEngine.Interfaces;
-using TyzeEngine.Materials;
+using TyzeEngine.Physics;
 
 namespace TyzeEngine.Objects;
 
@@ -58,7 +58,7 @@ public struct SaveObjectState : ISaveable
     public byte[] Color { get; set; }
     public int VisibilityType { get; set; }
     public int Visual { get; set; }
-    public ushort CollisionLayer { get; set; }
+    public int CollisionLayer { get; set; }
     public byte[] Material { get; set; }
     public byte[] Force { get; set; }
     public byte[] GravityForce { get; set; }
@@ -68,14 +68,14 @@ public struct SaveObjectState : ISaveable
     {
         Id = obj.Id;
         ModelId = obj.Model.Id;
-        ResourceId = obj.Visual.Texture.Id;
+        ResourceId = UId.Default;
         BodyTypeName = obj.Body.GetType().FullName;
         Position = Vector.ToBytes(obj.Transform.Position);
         Scale = Vector.ToBytes(obj.Transform.Scale);
         Rotation = Vector.ToBytes(obj.Transform.Rotation);
-        Color = Vector.ToBytes(Color4.ToXyz(obj.Visual.Color));
-        VisibilityType = (int)obj.Visual.Visibility;
-        Visual = (int)obj.Visual.Type;
+        Color = Vector.ToBytes(Color4.ToXyz(obj.Color));
+        VisibilityType = (int)obj.Visibility;
+        Visual = (int)obj.VisualType;
         CollisionLayer = obj.Body.CollisionLayer;
         Material = MaterialToBytes(obj.Body.Material);
         Force = Vector.ToBytes(obj.Body.Force);
