@@ -2,8 +2,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using TyzeEngine.Interfaces;
+using TyzeEngine.Resources;
 
-namespace TyzeEngine.Resources;
+namespace TyzeEngine.GameStructure;
 
 public abstract class Resource : IResource
 {

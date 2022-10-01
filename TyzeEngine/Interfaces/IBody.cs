@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using OpenTK.Mathematics;
-using TyzeEngine.Interfaces;
+using TyzeEngine.Physics;
 
-namespace TyzeEngine.Physics;
+namespace TyzeEngine.Interfaces;
 
 public interface IBody : IDeepCloneable<IBody>
 {

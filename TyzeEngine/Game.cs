@@ -7,12 +7,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using OpenTK.Mathematics;
+using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using TyzeEngine.GameStructure;
 using TyzeEngine.Interfaces;
-using TyzeEngine.Objects;
 using TyzeEngine.Physics;
-using TyzeEngine.Resources;
 
 namespace TyzeEngine;
 
@@ -30,20 +29,22 @@ public static class Game
     private static readonly SortedList<string, IModel> PrivateModels = new();
     private static readonly SortedList<string, IMaterial> PrivateMaterials = new();
     private static bool _isRunning;
-    private static int _currentSceneIndex;
     private static readonly IReadOnlyDictionary<GameResourceType, IDictionary> Lists;
     private static Stopwatch _fixedTime;
     private static readonly Task FixedExecute = new(() =>
     {
         while (_isRunning)
         {
-            if (_fixedTime.Elapsed.TotalSeconds <= Settings.FixedTime) 
+            FrameTimeState.FixedTime = (float)_fixedTime.Elapsed.TotalSeconds;
+            
+            if (FrameTimeState.FixedTime <= Settings.FixedTime) 
                 continue;
             
+            PhysicsWorld.Step(CurrentScene.GetCurrentGameObjects());
             // For используется для безопасного удаления скриптов.
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < FrameScripts.Count; i++)
-                FrameScripts[i].FixedExecuteScript();
+                FrameScripts[i].InternalFixedExecute();
             
             _fixedTime.Restart();
         }
@@ -58,8 +59,9 @@ public static class Game
     internal static IReadOnlyDictionary<string, IMaterial> Materials => PrivateMaterials;
     internal static readonly List<IScript> FrameScripts = new();
     internal static readonly SortedList<BodyVisualType, Shader> Shaders = new();
+    internal static IScene CurrentScene { get; set; }
     
-    public static GameSettings Settings { get; } = new();
+    public static GameSettings Settings { get; }
     public static IPhysicsWorld PhysicsWorld { get; set; } = new DynamicWorld();
     
     /// <summary> Стандартное имя сцены, которая изначально находится в игре. </summary>
@@ -84,34 +86,39 @@ public static class Game
         };
         Add(StandardSceneName, StandardSpaceName, new Scene());
         Add(StandardWorldLightName, StandardSpaceName, new LightObject(LightType.Direction));
+        CurrentScene = Scene.Find(StandardSceneName);
+
+        var settings = new NativeWindowSettings
+        {
+            WindowBorder = WindowBorder.Fixed,
+            Size = new Vector2i(1000, 750),
+            Title = "Test application",
+            Flags = ContextFlags.ForwardCompatible,
+            APIVersion = new Version(3, 3)
+        };
+        Settings = new GameSettings(settings);
     }
 
     /// <summary>
     /// Запуск окна с игрой.
     /// </summary>
-    /// <param name="nativeWindowSettings">Настройки окна.</param>
     /// <exception cref="Exception">Повторный вызов метода.</exception>
-    public static void Run(NativeWindowSettings nativeWindowSettings)
+    public static void Run()
     {
         if (_isRunning)
             throw new Exception("Game is already running.");
         
-        _isRunning = true;
-        var gameWindowSettings = new GameWindowSettings { RenderFrequency = 144, UpdateFrequency = 144 };
-        
-        using (Settings.Window = new TyzeWindow(gameWindowSettings, nativeWindowSettings))
+        using (Settings.Window)
         {
-            Settings.Window.Scenes = PrivateScenes.Select(pair => pair.Value).ToList();
-            Settings.Window.Scripts = FrameScripts;
-            Settings.Window.CurrentSceneIndex = _currentSceneIndex;
+            _isRunning = true;
             Settings.Window.Run();
             _isRunning = false;
+            
+            if (FixedExecute.Status == TaskStatus.Running)
+                FixedExecute.Wait(25);
+            
+            Unload();
         }
-
-        Settings.Window = null;
-        
-        if (FixedExecute.Status == TaskStatus.Running)
-            FixedExecute.Wait(100);
     }
 
     #region SaveLoadMethods
@@ -121,7 +128,7 @@ public static class Game
         if (PrivateScenes.Count == 0 || PrivateSpaces.Count == 0 || Objects.Count == 0)
             return;
 
-        var saveObject = new SaveObject(_currentSceneIndex, PrivateSpaces.Count, Objects.Count);
+        var saveObject = new SaveObject(PrivateSpaces.Count, Objects.Count);
 
         foreach (var (_, space) in PrivateSpaces)
             saveObject.AddSpaceObjects(space);
@@ -138,7 +145,6 @@ public static class Game
         var withErrors = false;
         var bytes = Saver.Load(fileName);
         var saveObject = SaveObject.GetByBytes(bytes);
-        _currentSceneIndex = saveObject.CurrentSceneIndex;
         
         foreach (var (_, obj) in Objects)
         {
@@ -396,7 +402,7 @@ public static class Game
         if (!_isRunning)
             throw new Exception("Game is not running.");
         
-        Thread.Sleep(50);
+        Thread.Sleep(25);
         
         _fixedTime = Stopwatch.StartNew();
         FixedExecute.Start();
@@ -444,5 +450,14 @@ public static class Game
             obj.Id = new UId();
 
         UIds.Add(obj.Id, type);
+    }
+
+    private static void Unload()
+    {
+        foreach (var (_, scene) in Scenes)
+            scene.Dispose();
+        
+        foreach(var (_, shader) in Shaders)
+            shader.Dispose();
     }
 }

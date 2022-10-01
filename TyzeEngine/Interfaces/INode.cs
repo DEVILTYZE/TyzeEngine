@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using OpenTK.Mathematics;
-using TyzeEngine.Interfaces;
 using TyzeEngine.Physics;
 
-namespace TyzeEngine.Resources;
+namespace TyzeEngine.Interfaces;
 
 public interface INode : IDeepCloneable<INode>, IDisposable
 {

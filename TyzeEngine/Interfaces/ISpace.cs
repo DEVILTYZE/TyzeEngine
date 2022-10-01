@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using TyzeEngine.Interfaces;
+﻿using System.Collections.Generic;
 
-namespace TyzeEngine.GameStructure;
+namespace TyzeEngine.Interfaces;
 
-public interface ISpace : IDisposable, IGameResource
+public interface ISpace : IGameResource
 {
     internal string SceneOrSpaceName { get; set; }
     

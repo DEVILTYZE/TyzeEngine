@@ -2,17 +2,17 @@
 using System.Diagnostics.CodeAnalysis;
 using TyzeEngine.Interfaces;
 
-namespace TyzeEngine.Objects;
+namespace TyzeEngine.GameStructure;
 
 public abstract class Script : IScript
 {
     public UId Id { get; set; } = new();
 
-    void IScript.PrepareScript() => Prepare();
+    void IScript.InternalPrepare() => Prepare();
 
-    void IScript.ExecuteScript() => Execute();
+    void IScript.InternalExecute() => Execute();
 
-    void IScript.FixedExecuteScript() => FixedExecute();
+    void IScript.InternalFixedExecute() => FixedExecute();
 
     protected abstract void Prepare();
     

@@ -3,6 +3,7 @@ using OpenTK.Graphics.OpenGL4;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using TyzeEngine.GameStructure;
 
 namespace TyzeEngine.Resources;
 

@@ -7,11 +7,14 @@ using Assimp;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Physics;
+using TyzeEngine.Resources;
 using AssimpNode = Assimp.Node;
 using AssimpMesh = Assimp.Mesh;
-using Material = Assimp.Material;
+using AssimpMaterial = Assimp.Material;
+using Mesh = TyzeEngine.Resources.Mesh;
+using Node = TyzeEngine.Resources.Node;
 
-namespace TyzeEngine.Resources;
+namespace TyzeEngine.GameStructure;
 
 public class Model : IModel
 {
@@ -120,7 +123,7 @@ public class Model : IModel
     {
     }
 
-    private void ProcessNode(AssimpNode aiNode, Scene aiScene, INode modelNode)
+    private void ProcessNode(AssimpNode aiNode, Assimp.Scene aiScene, INode modelNode)
     {
         for (var i = 0; i < aiNode.MeshCount; ++i)
         {
@@ -136,7 +139,7 @@ public class Model : IModel
         }
     }
 
-    private IMesh ProcessMesh(AssimpMesh mesh, Scene scene, INode modelNode)
+    private IMesh ProcessMesh(AssimpMesh mesh, Assimp.Scene scene, INode modelNode)
     {
         if (!mesh.HasNormals)
             throw new Exception("Mesh doesn't has normals.");
@@ -182,7 +185,7 @@ public class Model : IModel
         return modelMesh;
     }
 
-    private IEnumerable<Texture> LoadMaterialTextures(Material material, TextureType type)
+    private IEnumerable<Texture> LoadMaterialTextures(AssimpMaterial material, TextureType type)
     {
         var count = material.GetMaterialTextureCount(type);
         var list = new List<Texture>(count);

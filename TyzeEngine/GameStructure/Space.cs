@@ -8,8 +8,6 @@ namespace TyzeEngine.GameStructure;
 
 public sealed class Space : ISpace
 {
-    private bool _disposed;
-
     string ISpace.SceneOrSpaceName { get; set; }
     
     public UId Id { get; set; } = new();
@@ -17,14 +15,6 @@ public sealed class Space : ISpace
     public List<IGameObject> GameObjects { get; set; } = new();
     public bool Loaded { get; set; }
 
-    ~Space() => ReleaseUnmanagedResources();
-
-    public void Dispose()
-    {
-        ReleaseUnmanagedResources();
-        GC.SuppressFinalize(this);
-    }
-    
     void IGameResource.Remove()
     {
         var key = ((ISpace)this).SceneOrSpaceName;
@@ -50,14 +40,5 @@ public sealed class Space : ISpace
         var isFound = Game.Spaces.TryGetValue(name, out var value);
 
         return isFound ? value : throw new Exception("Space not found.");
-    }
-
-    private void ReleaseUnmanagedResources()
-    {
-        if (_disposed)
-            return;
-
-        NeighbourSpaces = null;
-        _disposed = true;
     }
 }

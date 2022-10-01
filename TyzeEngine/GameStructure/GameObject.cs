@@ -5,9 +5,8 @@ using System.Linq;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Physics;
-using TyzeEngine.Resources;
 
-namespace TyzeEngine.Objects;
+namespace TyzeEngine.GameStructure;
 
 public class GameObject : IGameObject
 {
@@ -21,7 +20,6 @@ public class GameObject : IGameObject
     public Color4 Color { get; set; } = Constants.NullColor;
     public Visibility Visibility { get; set; } = Visibility.Visible;
     public BodyVisualType VisualType { get; protected internal set; } = BodyVisualType.Object;
-    public bool CullFace { get; set; } = true;
     public bool SaveStatus { get; set; }
     public bool IsTrigger { get; set; }
     public CollisionHandler OnCollision { get; set; }
@@ -50,7 +48,6 @@ public class GameObject : IGameObject
         currentObj.Visibility = Visibility;
         currentObj.VisualType = VisualType;
         currentObj.SaveStatus = SaveStatus;
-        currentObj.CullFace = CullFace;
 
         return currentObj;
     }

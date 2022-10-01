@@ -1,4 +1,6 @@
-﻿namespace TyzeEngine.Physics;
+﻿using TyzeEngine.GameStructure;
+
+namespace TyzeEngine.Physics;
 
 public class Rock : Material
 {

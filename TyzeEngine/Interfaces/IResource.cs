@@ -1,7 +1,6 @@
 ﻿using System;
-using TyzeEngine.Interfaces;
 
-namespace TyzeEngine.Resources;
+namespace TyzeEngine.Interfaces;
 
 public interface IResource : IDisposable, IGameResource
 {

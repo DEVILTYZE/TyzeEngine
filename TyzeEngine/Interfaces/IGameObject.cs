@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using OpenTK.Mathematics;
 using TyzeEngine.Physics;
-using TyzeEngine.Resources;
 
 namespace TyzeEngine.Interfaces;
 
@@ -15,7 +14,6 @@ public interface IGameObject : IDeepCloneable<IGameObject>, IGameResource
     Color4 Color { get; set; }
     Visibility Visibility { get; set; }
     BodyVisualType VisualType { get; }
-    bool CullFace { get; set; }
     bool SaveStatus { get; set; }
     bool IsTrigger { get; set; }
     CollisionHandler OnCollision { get; set; }

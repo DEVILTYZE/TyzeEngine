@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using OpenTK.Mathematics;
-using TyzeEngine.Interfaces;
 using TyzeEngine.Physics;
+using TyzeEngine.Resources;
 
-namespace TyzeEngine.Resources;
+namespace TyzeEngine.Interfaces;
 
 public interface IMesh : IDisposable, IDeepCloneable<IMesh>
 {

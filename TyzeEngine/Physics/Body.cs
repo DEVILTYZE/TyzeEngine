@@ -63,5 +63,5 @@ public abstract class Body : IBody
         return body;
     }
 
-    List<Vector3> IBody.GetVectors() => new() { Velocity, GravityForce, Force, Torque };
+    List<Vector3> IBody.GetVectors() => new() { Velocity, GravityForce, Force };
 }

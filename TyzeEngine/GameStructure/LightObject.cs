@@ -2,7 +2,7 @@
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
 
-namespace TyzeEngine.Objects;
+namespace TyzeEngine.GameStructure;
 
 public class LightObject : GameObject, ILightObject
 {

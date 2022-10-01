@@ -1,14 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using OpenTK.Audio.OpenAL;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
-using TyzeEngine.GameStructure;
 using TyzeEngine.Interfaces;
-using TyzeEngine.Objects;
 
 namespace TyzeEngine;
 
@@ -26,18 +23,11 @@ internal sealed class TyzeWindow : GameWindow
     private readonly string _title;
 
     // PROPERTIES
-    private IScene CurrentScene => Scenes?[CurrentSceneIndex];
-
-    internal int CurrentSceneIndex { get; set; }
-    internal IReadOnlyList<IScene> Scenes { get; set; }
-    internal IReadOnlyList<IScript> Scripts { get; set; }
     internal TriggerHandler TriggerNextScene { get; }
 
     internal TyzeWindow(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings) 
         : base(gameWindowSettings, nativeWindowSettings)
     {
-        VSync = VSyncMode.Off;
-
         // SHOW FPS настройки.
         _title = nativeWindowSettings.Title;
         Input.SetStates(KeyboardState, MouseState);
@@ -51,13 +41,13 @@ internal sealed class TyzeWindow : GameWindow
         GL.Enable(EnableCap.DepthTest);
         GL.Enable(EnableCap.CullFace);
         
-        CurrentScene.LoadSceneHandler = TriggerNextScene;
+        Game.CurrentScene.LoadSceneHandler = TriggerNextScene;
         Game.SetShaders();
         Camera.Fov = 45;
         Camera.SetAspectRatio(Size.X / (float)Size.Y);
         InitializeAudio();
-        CurrentScene.Run();
-        Scripts.ToList().ForEach(script => script.PrepareScript());
+        Game.CurrentScene.Run();
+        Game.FrameScripts.ToList().ForEach(script => script.InternalPrepare());
         
         // При отладке идёт отображение векторов скоростей, сил и т.п.
         if (Game.Settings.RunMode == RunMode.Debug)
@@ -94,8 +84,8 @@ internal sealed class TyzeWindow : GameWindow
             Close();
 #endif
         // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < Scripts.Count; i++)
-            Scripts[i].ExecuteScript();
+        for (var i = 0; i < Game.FrameScripts.Count; i++)
+            Game.FrameScripts[i].InternalExecute();
 
         // something...
     }
@@ -114,15 +104,13 @@ internal sealed class TyzeWindow : GameWindow
         ALC.MakeContextCurrent(ALContext.Null);
         ALC.DestroyContext(_context);
         ALC.CloseDevice(_device);
-        Game.Shaders.ToList().ForEach(pair => pair.Value.Dispose());
-        Scenes.ToList().ForEach(scene => scene.Dispose());
 
         base.OnUnload();
     }
 
     private void DrawObjects()
     {
-        var objects = CurrentScene.GetCurrentGameObjects();
+        var objects = Game.CurrentScene.GetCurrentGameObjects();
         var lights = objects.Where(obj => obj.VisualType is BodyVisualType.Light)
             .Cast<ILightObject>().ToList();
         
@@ -136,8 +124,6 @@ internal sealed class TyzeWindow : GameWindow
             obj.DrawLines();
             obj.Body?.GetVectors().ForEach(vector => DrawDebugVector(vector, obj));
         }
-
-        Game.PhysicsWorld.Step(objects);
     }
 
     private void ShowFps(double time)
@@ -172,6 +158,7 @@ internal sealed class TyzeWindow : GameWindow
             return;
 
         var shader = Game.Shaders[BodyVisualType.Line];
+        shader.Enable();
         var scale = vector.LengthFast * Vector3.One;
         var position = obj.Transform.Position;
         _vectorObject.Enable();
@@ -181,6 +168,7 @@ internal sealed class TyzeWindow : GameWindow
         shader.SetVector4("inColor", new Vector4(1, 1, 1, 1));
         _vectorObject.Draw(PrimitiveType.LineLoop, 0, 2);
         _vectorObject.Disable();
+        shader.Disable();
     }
     
     private void InitializeVectorObject()

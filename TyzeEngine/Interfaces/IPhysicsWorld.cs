@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
-using TyzeEngine.Interfaces;
 
-namespace TyzeEngine.Physics;
+namespace TyzeEngine.Interfaces;
 
 public interface IPhysicsWorld
 {

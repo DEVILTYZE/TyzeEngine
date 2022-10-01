@@ -1,8 +1,7 @@
 ﻿using System;
-using TyzeEngine.Interfaces;
 using TyzeEngine.Physics;
 
-namespace TyzeEngine.Resources;
+namespace TyzeEngine.Interfaces;
 
 public interface IModel : IDisposable, IGameResource, IDeepCloneable<IModel>
 {

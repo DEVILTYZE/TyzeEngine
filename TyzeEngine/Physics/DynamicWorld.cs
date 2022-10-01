@@ -11,9 +11,11 @@ public class DynamicWorld : CollisionWorld, IPhysicsWorld
 
     public void Step(IEnumerable<IGameObject> objects)
     {
-        var list = objects.Where(obj => obj.Body is not null && obj.Body.IsEnabled && obj.Visibility != 
-            Visibility.Collapsed).ToList();
-        
+        var list = objects.Where(obj => 
+            obj.Body is not null && 
+            obj.Body.IsEnabled && 
+            obj.Visibility != Visibility.Collapsed).ToList();
+
         list.ForEach(obj =>
         {
             if (obj.Body.GravityForce == Vector3.Zero && obj.Body.TakesGravityForce)
@@ -29,7 +31,7 @@ public class DynamicWorld : CollisionWorld, IPhysicsWorld
 
     private static void MoveObject(IGameObject obj)
     {
-        var time = FrameTimeState.RenderTime;
+        var time = FrameTimeState.FixedTime;
         var angularAcceleration = obj.Body.Torque * obj.Body.InverseInertia;
         obj.Body.Torque = Vector3.Zero;
         obj.Body.AngularVelocity += angularAcceleration * time;

@@ -4,7 +4,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using TyzeEngine.Interfaces;
-using TyzeEngine.Resources;
 
 namespace TyzeEngine.GameStructure;
 
@@ -65,8 +64,13 @@ public sealed class Scene : IScene
         }
     }
 
-    IReadOnlyList<IGameObject> IScene.GetCurrentGameObjects() =>
-        new[] { CurrentSpace }.Concat(CurrentSpace.NeighbourSpaces).SelectMany(space => space.GameObjects).ToList();
+    IReadOnlyList<IGameObject> IScene.GetCurrentGameObjects()
+    {
+        var objects = new List<IGameObject>(CurrentSpace.GameObjects);
+        CurrentSpace.NeighbourSpaces.ForEach(space => objects.AddRange(space.GameObjects));
+
+        return objects;
+    }
 
     public void Dispose()
     {
@@ -105,10 +109,7 @@ public sealed class Scene : IScene
             foreach (var neighbourSpace in CurrentSpace.NeighbourSpaces)
             {
                 if (neighbourSpace.Id != id)
-                {
-                    neighbourSpace.Dispose();
                     neighbourSpace.Loaded = false;
-                }
                 else
                 {
                     space = neighbourSpace;
@@ -134,8 +135,6 @@ public sealed class Scene : IScene
         if (_disposed)
             return;
         
-        var spaces = new List<ISpace>(new[] { CurrentSpace }.Concat(CurrentSpace.NeighbourSpaces));
-        spaces.ForEach(space => space?.Dispose());
         Models.ToList().ForEach(pair => pair.Value?.Dispose());
         _disposed = true;
     }

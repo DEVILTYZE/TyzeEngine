@@ -1,56 +1,21 @@
-﻿using System;
-using OpenTK.Windowing.Common;
+﻿using OpenTK.Windowing.Common;
+using OpenTK.Windowing.Desktop;
 
 namespace TyzeEngine;
 
 public class GameSettings
 {
-    internal TyzeWindow Window { get; set; }
+    private readonly GameWindowSettings _gameWindowSettings = new() { RenderFrequency = 144, UpdateFrequency = 144 };
     
+    internal TyzeWindow Window { get; }
+
     /// <summary> Режим запуска. Значение по умолчанию — Debug. </summary>
     public RunMode RunMode { get; set; } = RunMode.Debug;
-
-    public CursorState CursorState
-    {
-        get
-        {
-            if (Window is null)
-                throw new Exception("Can't use this property while window is not created.");
-            
-            return Window.CursorState;
-        }
-        set
-        {
-            if (Window is null)
-                throw new Exception("Can't use this property while window is not created.");
-            
-            Window.CursorState = value;
-        }
-    }
-
-    public VSyncMode VSync
-    {
-        get
-        {
-            if (Window is null)
-                throw new Exception("Can't use this property while window is not created.");
-            
-            return Window.VSync;
-        }
-        set
-        {
-            if (Window is null)
-                throw new Exception("Can't use this property while window is not created.");
-            
-            Window.VSync = value;
-        }
-    }
-
+    public CursorState CursorState { get => Window.CursorState; set => Window.CursorState = value; }
+    public VSyncMode VSync { get => Window.VSync; set => Window.VSync = value; }
     public bool AntiAliasing { get; set; } = false;
     public double FixedTime { get; set; } = Constants.FixedTimeLimit;
     public Saver Saver { get; set; } = new();
-
-    internal GameSettings()
-    {
-    }
+    
+    internal GameSettings(NativeWindowSettings settings) => Window = new TyzeWindow(_gameWindowSettings, settings);
 }

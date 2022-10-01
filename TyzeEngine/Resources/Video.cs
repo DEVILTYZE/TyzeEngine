@@ -1,4 +1,5 @@
 ﻿using System;
+using TyzeEngine.GameStructure;
 
 namespace TyzeEngine.Resources;
 

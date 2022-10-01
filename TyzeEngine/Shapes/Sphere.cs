@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using OpenTK.Mathematics;
+using TyzeEngine.GameStructure;
+using TyzeEngine.Interfaces;
 using TyzeEngine.Resources;
 
 namespace TyzeEngine.Shapes;

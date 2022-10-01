@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using TyzeEngine.Interfaces;
-using TyzeEngine.Resources;
 
-namespace TyzeEngine.GameStructure;
+namespace TyzeEngine.Interfaces;
 
 public interface IScene : IDisposable, IGameResource
 {

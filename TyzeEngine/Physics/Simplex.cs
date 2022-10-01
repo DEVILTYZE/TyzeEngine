@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using OpenTK.Mathematics;
 
 namespace TyzeEngine.Physics;
 
@@ -28,11 +27,12 @@ public class Simplex<T> where T : struct
 
     public void Add(T point)
     {
-        for (var i = _points.Length - 1; i > 0; --i)
+        Length = Math.Min(Length + 1, 4);
+        
+        for (var i = Length - 1; i > 0; --i)
             _points[i] = _points[i - 1];
 
         _points[0] = point;
-        Length = Math.Min(Length + 1, 4);
     }
 
     public T this[int index] => _points[index];
@@ -43,9 +43,12 @@ public class Simplex<T> where T : struct
     {
         var sb = new StringBuilder("[");
 
-        for (var i = 0; i < Length; ++i)
+        for (var i = 0; i < Length - 1; ++i)
             sb.Append(_points[i] + ", ");
-
+        
+        if (Length > 0)
+            sb.Append(_points[Length - 1]);
+        
         return sb + "]";
     }
 }

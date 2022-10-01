@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using OpenTK.Mathematics;
-using TyzeEngine.Interfaces;
 
 namespace TyzeEngine.Physics;
 
@@ -11,7 +10,7 @@ public static class GJK
 {
     private const int GjkEpaMaxIterations = 5;
 
-    public static CollisionPoints TestCollision(MeshBody bodyA, ITransform transformA, MeshBody bodyB, ITransform transformB)
+    public static CollisionPoints TestCollision(MeshBody bodyA, MeshBody bodyB)
     {
         if (bodyA.Dimension != bodyB.Dimension)
             return CollisionPoints.NonCollides;
@@ -23,6 +22,8 @@ public static class GJK
             _ => CollisionPoints.NonCollides
         };
     }
+
+    #region GJK2D
     
     private static bool TestCollision(MeshBody bodyA, MeshBody bodyB, out Simplex<Vector2> simplex)
     {
@@ -35,33 +36,12 @@ public static class GJK
         {
             supportPoint = GetSupportPoint(bodyA, bodyB, direction);
 
-            if (Vector2.Dot(supportPoint, direction) <= 0)
+            if (Vector2.Dot(supportPoint, direction) <= 0 || simplex.Length > 3)
                 return false; // Нет коллизии.
             
             simplex.Add(supportPoint);
 
-            if (NextSimplex(simplex, direction))
-                return true;
-        }
-    }
-    
-    private static bool TestCollision(MeshBody bodyA, MeshBody bodyB, out Simplex<Vector3> simplex)
-    {
-        var supportPoint = GetSupportPoint(bodyA, bodyB, Vector3.UnitX);
-        simplex = new Simplex<Vector3>();
-        simplex.Add(supportPoint);
-        var direction = -supportPoint;
-
-        while (true)
-        {
-            supportPoint = GetSupportPoint(bodyA, bodyB, direction);
-
-            if (Vector3.Dot(supportPoint, direction) <= 0)
-                return false; // Нет коллизии.
-            
-            simplex.Add(supportPoint);
-
-            if (NextSimplex(simplex, direction))
+            if (NextSimplex(simplex, ref direction))
                 return true;
         }
     }
@@ -69,12 +49,7 @@ public static class GJK
     private static Vector2 GetSupportPoint(MeshBody bodyA, MeshBody bodyB, Vector2 direction) =>
         bodyA.FindFurthestPoint(direction) - bodyB.FindFurthestPoint(-direction);
 
-    private static Vector3 GetSupportPoint(MeshBody bodyA, MeshBody bodyB, Vector3 direction) =>
-        bodyA.FindFurthestPoint(direction) - bodyB.FindFurthestPoint(-direction);
-
-    #region GJK2D
-
-    private static bool NextSimplex(Simplex<Vector2> simplex, Vector2 direction) => simplex.Length switch
+    private static bool NextSimplex(Simplex<Vector2> simplex, ref Vector2 direction) => simplex.Length switch
     {
         2 => Line(simplex, out direction),
         3 => Triangle(simplex, ref direction),
@@ -107,28 +82,42 @@ public static class GJK
         var acf = TripleProduct(ab, ac, ac);
         
         if (SameDirection(abf, ao))
-        {
-            simplex = new Simplex<Vector2>(new[] { a, b });
-
-            return Line(simplex, out direction);
-        }
-
-        if (!SameDirection(acf, ao)) 
-            return true;
+            return Line(simplex = new Simplex<Vector2>(new[] { a, b }), out direction);
         
-        simplex = new Simplex<Vector2>(new[] { a, c });
-
-        return Line(simplex, out direction);
+        return !SameDirection(acf, ao) || Line(simplex = new Simplex<Vector2>(new[] { a, c }), out direction);
     }
     
-    private static bool SameDirection(Vector2 direction, Vector2 ao) => 
-        Vector3.Dot(new Vector3(direction), new Vector3(ao)) > 0;
+    private static bool SameDirection(Vector2 direction, Vector2 ao) => Vector2.Dot(direction, ao) > 0;
 
     #endregion
     
     #region GJK3D
+    
+    private static bool TestCollision(MeshBody bodyA, MeshBody bodyB, out Simplex<Vector3> simplex)
+    {
+        var supportPoint = GetSupportPoint(bodyA, bodyB, Vector3.UnitX);
+        simplex = new Simplex<Vector3>();
+        simplex.Add(supportPoint);
+        var direction = -supportPoint;
 
-    private static bool NextSimplex(Simplex<Vector3> simplex, Vector3 direction) => simplex.Length switch
+        while (true)
+        {
+            supportPoint = GetSupportPoint(bodyA, bodyB, direction);
+
+            if (Vector3.Dot(supportPoint, direction) <= 0)
+                return false; // Нет коллизии.
+            
+            simplex.Add(supportPoint);
+
+            if (NextSimplex(simplex, ref direction))
+                return true;
+        }
+    }
+
+    private static Vector3 GetSupportPoint(MeshBody bodyA, MeshBody bodyB, Vector3 direction) =>
+        bodyA.FindFurthestPoint(direction) - bodyB.FindFurthestPoint(-direction);
+
+    private static bool NextSimplex(Simplex<Vector3> simplex, ref Vector3 direction) => simplex.Length switch
     {
         2 => Line(simplex, out direction),
         3 => Triangle(simplex, ref direction),

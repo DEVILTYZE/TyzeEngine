@@ -2,11 +2,9 @@
 using System.Linq;
 using System.Text.Json;
 using OpenTK.Mathematics;
-using TyzeEngine.GameStructure;
 using TyzeEngine.Interfaces;
-using TyzeEngine.Physics;
 
-namespace TyzeEngine.Objects;
+namespace TyzeEngine;
 
 [Serializable]
 public struct SaveObject : ISaveable
@@ -14,14 +12,12 @@ public struct SaveObject : ISaveable
     private int _lastSpaceId = 0;
     private int _lastObjectId = 0;
     
-    public int CurrentSceneIndex { get; set; }
     public UId[] SpaceIds { get; set; }
     public UId[][] SpaceObjects { get; set; }
     public SaveObjectState[] ObjectStates { get; set; }
 
-    public SaveObject(int currentSceneIndex, int spacesCount, int objectsCount)
+    public SaveObject(int spacesCount, int objectsCount)
     {
-        CurrentSceneIndex = currentSceneIndex;
         SpaceIds = new UId[spacesCount];
         SpaceObjects = new UId[spacesCount][];
         ObjectStates = new SaveObjectState[objectsCount];

@@ -86,7 +86,9 @@ public class MeshToMeshMethod : ICollisionMethod
     {
         var meshBodyA = (MeshBody)bodyA;
         var meshBodyB = (MeshBody)bodyB;
+        meshBodyA.Transform = transformA.ModelMatrix;
+        meshBodyB.Transform = transformB.ModelMatrix;
 
-        return GJK.TestCollision(meshBodyA, transformA, meshBodyB, transformB);
+        return GJK.TestCollision(meshBodyA, meshBodyB);
     }
 }

@@ -1,6 +1,6 @@
-﻿using TyzeEngine.Interfaces;
+﻿using TyzeEngine.Physics;
 
-namespace TyzeEngine.Physics;
+namespace TyzeEngine.Interfaces;
 
 public interface ICollisionMethod
 {

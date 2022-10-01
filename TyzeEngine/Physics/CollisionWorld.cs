@@ -23,7 +23,6 @@ public class CollisionWorld
                 if (objects[i].Body.CollisionLayer == objects[j].Body.CollisionLayer)
                     continue;
 
-                var key = new TypeKey(objects[i].Body.GetType(), objects[j].Body.GetType());
                 var points = objects[i].TestCollision(objects[i].Transform, objects[j], objects[j].Transform);
 
                 if (!points.IsCollides) 

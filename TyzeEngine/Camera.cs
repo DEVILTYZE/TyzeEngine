@@ -1,7 +1,7 @@
 ﻿using System;
 using OpenTK.Mathematics;
 
-namespace TyzeEngine.Objects;
+namespace TyzeEngine;
 
 public static class Camera
 {
