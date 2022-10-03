@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using OpenTK.Mathematics;
 using TyzeEngine.Physics;
+using TyzeEngine.Physics.Bodies;
 using TyzeEngine.Resources;
 
 namespace TyzeEngine.Interfaces;

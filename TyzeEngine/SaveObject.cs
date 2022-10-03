@@ -12,14 +12,14 @@ public struct SaveObject : ISaveable
     private int _lastSpaceId = 0;
     private int _lastObjectId = 0;
     
-    public UId[] SpaceIds { get; set; }
-    public UId[][] SpaceObjects { get; set; }
+    public UID[] SpaceIds { get; set; }
+    public UID[][] SpaceObjects { get; set; }
     public SaveObjectState[] ObjectStates { get; set; }
 
     public SaveObject(int spacesCount, int objectsCount)
     {
-        SpaceIds = new UId[spacesCount];
-        SpaceObjects = new UId[spacesCount][];
+        SpaceIds = new UID[spacesCount];
+        SpaceObjects = new UID[spacesCount][];
         ObjectStates = new SaveObjectState[objectsCount];
     }
 
@@ -44,9 +44,9 @@ public struct SaveObject : ISaveable
 [Serializable]
 public struct SaveObjectState : ISaveable
 {
-    public UId Id { get; set; }
-    public UId ModelId { get; set; }
-    public UId ResourceId { get; set; }
+    public UID Id { get; set; }
+    public UID ModelId { get; set; }
+    public UID ResourceId { get; set; }
     public string BodyTypeName { get; set; }
     public byte[] Position { get; set; }
     public byte[] Scale { get; set; }
@@ -58,13 +58,12 @@ public struct SaveObjectState : ISaveable
     public byte[] Material { get; set; }
     public byte[] Force { get; set; }
     public byte[] GravityForce { get; set; }
-    public bool IsEnabled { get; set; }
     
     public SaveObjectState(IGameObject obj)
     {
         Id = obj.Id;
         ModelId = obj.Model.Id;
-        ResourceId = UId.Default;
+        ResourceId = UID.Default;
         BodyTypeName = obj.Body.GetType().FullName;
         Position = Vector.ToBytes(obj.Transform.Position);
         Scale = Vector.ToBytes(obj.Transform.Scale);
@@ -76,7 +75,6 @@ public struct SaveObjectState : ISaveable
         Material = MaterialToBytes(obj.Body.Material);
         Force = Vector.ToBytes(obj.Body.Force);
         GravityForce = Vector.ToBytes(obj.Body.GravityForce);
-        IsEnabled = obj.Body.IsEnabled;
     }
 
     public byte[] Save() => JsonSerializer.SerializeToUtf8Bytes(this);

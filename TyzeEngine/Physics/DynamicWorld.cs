@@ -11,10 +11,7 @@ public class DynamicWorld : CollisionWorld, IPhysicsWorld
 
     public void Step(IEnumerable<IGameObject> objects)
     {
-        var list = objects.Where(obj => 
-            obj.Body is not null && 
-            obj.Body.IsEnabled && 
-            obj.Visibility != Visibility.Collapsed).ToList();
+        var list = objects.Where(obj => obj.Body is not null).ToList();
 
         list.ForEach(obj =>
         {
@@ -27,19 +24,18 @@ public class DynamicWorld : CollisionWorld, IPhysicsWorld
     }
 
     private static void ApplyGravity(List<IGameObject> objects)
-        => objects.ForEach(obj => obj.Body.Force += obj.Body.GravityForce * obj.Body.InverseMass);
+        => objects.ForEach(obj => obj.Body.Force += obj.Body.GravityForce * obj.Body.Mass);
 
     private static void MoveObject(IGameObject obj)
     {
-        var time = FrameTimeState.FixedTime;
         var angularAcceleration = obj.Body.Torque * obj.Body.InverseInertia;
         obj.Body.Torque = Vector3.Zero;
-        obj.Body.AngularVelocity += angularAcceleration * time;
-        obj.Transform.Rotation += obj.Body.AngularVelocity * time;
+        obj.Body.AngularVelocity += angularAcceleration * FrameTimeState.FixedTime;
+        obj.Transform.Rotation += obj.Body.AngularVelocity * FrameTimeState.FixedTime;
             
         var acceleration = obj.Body.Force * obj.Body.InverseMass;
         obj.Body.Force = Vector3.Zero;
-        obj.Body.Velocity += acceleration * time;
-        obj.Transform.Position += obj.Body.Velocity * time;
+        obj.Body.Velocity += acceleration * FrameTimeState.FixedTime;
+        obj.Transform.Position += obj.Body.Velocity * FrameTimeState.FixedTime;
     }
 }

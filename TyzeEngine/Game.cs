@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
@@ -19,7 +16,7 @@ public static class Game
 {
     #region PropertiesAndFields
 
-    private static readonly Dictionary<UId, GameResourceType> UIds = new();
+    private static readonly Dictionary<UID, GameResourceType> UIds = new();
     private static readonly Dictionary<string, GameResourceType> Names = new();
     private static readonly SortedList<string, IScene> PrivateScenes = new();
     private static readonly SortedList<string, ISpace> PrivateSpaces = new();
@@ -30,26 +27,7 @@ public static class Game
     private static readonly SortedList<string, IMaterial> PrivateMaterials = new();
     private static bool _isRunning;
     private static readonly IReadOnlyDictionary<GameResourceType, IDictionary> Lists;
-    private static Stopwatch _fixedTime;
-    private static readonly Task FixedExecute = new(() =>
-    {
-        while (_isRunning)
-        {
-            FrameTimeState.FixedTime = (float)_fixedTime.Elapsed.TotalSeconds;
-            
-            if (FrameTimeState.FixedTime <= Settings.FixedTime) 
-                continue;
-            
-            PhysicsWorld.Step(CurrentScene.GetCurrentGameObjects());
-            // For используется для безопасного удаления скриптов.
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < FrameScripts.Count; i++)
-                FrameScripts[i].InternalFixedExecute();
-            
-            _fixedTime.Restart();
-        }
-    });
-    
+
     internal static IReadOnlyDictionary<string, IScene> Scenes => PrivateScenes;
     internal static IReadOnlyDictionary<string, ISpace> Spaces => PrivateSpaces;
     internal static IReadOnlyDictionary<string, IGameObject> GameObjects => Objects;
@@ -60,14 +38,20 @@ public static class Game
     internal static readonly List<IScript> FrameScripts = new();
     internal static readonly SortedList<BodyVisualType, Shader> Shaders = new();
     internal static IScene CurrentScene { get; set; }
-    
-    public static GameSettings Settings { get; }
+
+    public static GameSettings Settings { get; } = new();
     public static IPhysicsWorld PhysicsWorld { get; set; } = new DynamicWorld();
     
-    /// <summary> Стандартное имя сцены, которая изначально находится в игре. </summary>
+    /// <summary>
+    /// Стандартное имя сцены, которая изначально находится в игре.
+    /// </summary>
     public const string StandardSceneName = "StandardScene";
-    /// <summary> Стандартное имя пространства, которое изначально находится в игре. </summary>
+    
+    /// <summary>
+    /// Стандартное имя пространства, которое изначально находится в игре.
+    /// </summary>
     public const string StandardSpaceName = "StandardSpace";
+    
     public const string StandardWorldLightName = "StandardWorldLight";
 
     #endregion
@@ -76,27 +60,18 @@ public static class Game
     {
         Lists = new SortedList<GameResourceType, IDictionary>
         {
-            { GameResourceType.Scene, PrivateScenes },
-            { GameResourceType.Space, PrivateSpaces },
-            { GameResourceType.GameObject, Objects },
-            { GameResourceType.Script, PrivateScripts },
-            { GameResourceType.Resource, PrivateResources },
-            { GameResourceType.Model, PrivateModels },
-            { GameResourceType.Material, PrivateMaterials }
+            { GameResourceType.Scene,      PrivateScenes    },
+            { GameResourceType.Space,      PrivateSpaces    },
+            { GameResourceType.GameObject, Objects          },
+            { GameResourceType.Script,     PrivateScripts   },
+            { GameResourceType.Resource,   PrivateResources },
+            { GameResourceType.Model,      PrivateModels    },
+            { GameResourceType.Material,   PrivateMaterials }
         };
+        
         Add(StandardSceneName, StandardSpaceName, new Scene());
         Add(StandardWorldLightName, StandardSpaceName, new LightObject(LightType.Direction));
         CurrentScene = Scene.Find(StandardSceneName);
-
-        var settings = new NativeWindowSettings
-        {
-            WindowBorder = WindowBorder.Fixed,
-            Size = new Vector2i(1000, 750),
-            Title = "Test application",
-            Flags = ContextFlags.ForwardCompatible,
-            APIVersion = new Version(3, 3)
-        };
-        Settings = new GameSettings(settings);
     }
 
     /// <summary>
@@ -107,18 +82,41 @@ public static class Game
     {
         if (_isRunning)
             throw new Exception("Game is already running.");
-        
-        using (Settings.Window)
+
+        var gameWindowSettings = new GameWindowSettings { RenderFrequency = 144, UpdateFrequency = 144 };
+        var settings = new NativeWindowSettings
         {
-            _isRunning = true;
-            Settings.Window.Run();
-            _isRunning = false;
-            
-            if (FixedExecute.Status == TaskStatus.Running)
-                FixedExecute.Wait(25);
-            
-            Unload();
-        }
+            WindowBorder = WindowBorder.Fixed,
+            Size = new Vector2i(1000, 750),
+            Title = "Test application",
+            Flags = ContextFlags.ForwardCompatible,
+            APIVersion = new Version(3, 3)
+        };
+
+        using var window = new TyzeWindow(gameWindowSettings, settings);
+        Settings.SetToWindow(window);
+        
+        _isRunning = true;
+        window.Run();
+        _isRunning = false;
+
+        Unload();
+    }
+
+    public static void Exit()
+    {
+        if (!_isRunning)
+            throw new Exception("Game is not running.");
+
+        throw new NotImplementedException();
+    }
+
+    public static void Restart()
+    {
+        if (!_isRunning)
+            throw new Exception("Game is not running.");
+        
+        Exit();
     }
 
     #region SaveLoadMethods
@@ -186,7 +184,6 @@ public static class Game
             //obj.Body.SetMaterial(BytesToMaterial(state.Material));
             obj.Body.Force = Vector.ToVector3(state.Force);
             obj.Body.GravityForce = Vector.ToVector3(state.GravityForce);
-            obj.Body.IsEnabled = state.IsEnabled;
         }
         
         foreach (var (_, space) in PrivateSpaces)
@@ -366,7 +363,7 @@ public static class Game
     /// Удаление любого объекта из игры по UID.
     /// </summary>
     /// <param name="id">UID объекта.</param>
-    public static void Remove(UId id)
+    public static void Remove(UID id)
     {
         if (!UIds.ContainsKey(id))
             return;
@@ -397,23 +394,12 @@ public static class Game
 
     #endregion
 
-    internal static void StartFixedExecute()
-    {
-        if (!_isRunning)
-            throw new Exception("Game is not running.");
-        
-        Thread.Sleep(25);
-        
-        _fixedTime = Stopwatch.StartNew();
-        FixedExecute.Start();
-    }
-
     internal static void SetShaders()
     {
         var paths = new (string VertShader, string FragShader)[]
         {
             (Constants.ShaderVertObjectPath, Constants.ShaderFragObjectPath),
-            (Constants.ShaderVertLinePath, Constants.ShaderFragLinePath)
+            (Constants.ShaderVertLinePath,   Constants.ShaderFragLinePath  )
         };
         var types = new[] { BodyVisualType.Object, BodyVisualType.Line };
 
@@ -447,7 +433,7 @@ public static class Game
     private static void TryAddUId(IGameResource obj, GameResourceType type)
     {
         while (UIds.ContainsKey(obj.Id))
-            obj.Id = new UId();
+            obj.Id = new UID();
 
         UIds.Add(obj.Id, type);
     }
@@ -459,5 +445,7 @@ public static class Game
         
         foreach(var (_, shader) in Shaders)
             shader.Dispose();
+
+        Shaders.Clear();
     }
 }

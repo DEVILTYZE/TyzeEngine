@@ -6,6 +6,7 @@ using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Physics;
+using TyzeEngine.Physics.Bodies;
 
 namespace TyzeEngine.Resources;
 

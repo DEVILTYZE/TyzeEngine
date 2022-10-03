@@ -25,10 +25,9 @@ internal static class Constants
     
     // DEFAULT VALUES
     internal const int MaxLightCount = 32;
-    internal const double FixedTimeLimit = .02; //.007;
+    internal const float FixedTimeLimit = .02f;
     internal const float YawDefault = -45;
     internal const float FowDefault = 45;
-    internal const float OneSecond = 1;
     internal const int DefaultDelay = 25;
     internal const int ErrorCode = -1;
     internal const int Vector2Length = 2;

@@ -2,5 +2,5 @@
 
 public interface ICollisionCallback
 { 
-    void Invoke(CollisionEventArgs args);
+    void Invoke(Manifold args);
 }

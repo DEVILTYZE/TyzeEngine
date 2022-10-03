@@ -10,7 +10,7 @@ public interface IScene : IDisposable, IGameResource
     
     bool LoadError { get; }
     ISpace CurrentSpace { get; set; }
-    SortedList<UId, IModel> Models { get; }
+    SortedList<UID, IModel> Models { get; }
     TriggerHandler LoadSceneHandler { get; set; }
 
     void LoadSpace(TriggeredEventArgs args);

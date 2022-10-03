@@ -186,6 +186,13 @@ public enum LightType
     SpotLight = 2
 }
 
+public enum CollisionState
+{
+    NonCollides = -1,
+    NonLayer = 0,
+    Layer = 1
+}
+
 internal enum GameResourceType
 {
     Scene = 0,

@@ -16,6 +16,7 @@ public interface IGameObject : IDeepCloneable<IGameObject>, IGameResource
     BodyVisualType VisualType { get; }
     bool SaveStatus { get; set; }
     bool IsTrigger { get; set; }
+    CollisionState CollisionState { get; }
     CollisionHandler OnCollision { get; set; }
     
     CollisionPoints TestCollision(ITransform transform, IGameObject obj, ITransform bodyTransform);

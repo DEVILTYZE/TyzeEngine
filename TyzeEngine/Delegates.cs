@@ -5,27 +5,27 @@ using TyzeEngine.Physics;
 namespace TyzeEngine;
 
 public delegate void TriggerHandler();
-public delegate void CollisionHandler(CollisionEventArgs args);
+public delegate void CollisionHandler(Manifold manifold);
 
 public class TriggeredEventArgs : EventArgs
 {
-    public UId ObjectId { get; }
+    public UID ObjectId { get; }
     
-    public static readonly TriggeredEventArgs NullArgs = new(UId.Default);
+    public static readonly TriggeredEventArgs NullArgs = new(UID.Default);
 
-    public TriggeredEventArgs(UId id)
+    public TriggeredEventArgs(UID id)
     {
         ObjectId = id;
     }
 }
 
-public class CollisionEventArgs : EventArgs
+public class Manifold : EventArgs
 {
     public IGameObject ObjectA { get; }
     public IGameObject ObjectB { get; }
     public CollisionPoints Points { get; }
 
-    public CollisionEventArgs(IGameObject objectA, IGameObject objectB, CollisionPoints points)
+    public Manifold(IGameObject objectA, IGameObject objectB, CollisionPoints points)
     {
         ObjectA = objectA;
         ObjectB = objectB;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using OpenTK.Audio.OpenAL;
 using OpenTK.Graphics.OpenGL4;
@@ -12,12 +13,13 @@ namespace TyzeEngine;
 internal sealed class TyzeWindow : GameWindow
 {
     private ArrayObject _vectorObject;
+    private float _accumulator;
     
     // AUDIO
     private ALDevice _device;
     private ALContext _context;
     
-    // FPS
+    // SHOW FPS
     private double _time;
     private int _frames;
     private readonly string _title;
@@ -40,9 +42,9 @@ internal sealed class TyzeWindow : GameWindow
         GL.ClearColor(Constants.DarkSpaceColor);
         GL.Enable(EnableCap.DepthTest);
         GL.Enable(EnableCap.CullFace);
-        
-        Game.CurrentScene.LoadSceneHandler = TriggerNextScene;
+
         Game.SetShaders();
+        Game.CurrentScene.LoadSceneHandler = TriggerNextScene;
         Camera.Fov = 45;
         Camera.SetAspectRatio(Size.X / (float)Size.Y);
         InitializeAudio();
@@ -53,13 +55,11 @@ internal sealed class TyzeWindow : GameWindow
         if (Game.Settings.RunMode == RunMode.Debug)
             InitializeVectorObject();
 
-        if (Game.Settings.AntiAliasing)
-        {
-            GL.Enable(EnableCap.Multisample);
-            GL.Hint(HintTarget.MultisampleFilterHintNv, HintMode.Nicest);
-        }
+        if (!Game.Settings.AntiAliasing) 
+            return;
         
-        Game.StartFixedExecute();
+        GL.Enable(EnableCap.Multisample);
+        GL.Hint(HintTarget.MultisampleFilterHintNv, HintMode.Nicest);
     }
 
     protected override void OnRenderFrame(FrameEventArgs args)
@@ -69,7 +69,9 @@ internal sealed class TyzeWindow : GameWindow
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         
         ShowFps(args.Time);
-        DrawObjects();
+        var objects = Game.CurrentScene.GetCurrentGameObjects();
+        StepPhysics(objects, (float)args.Time);
+        DrawObjects(objects);
 
         SwapBuffers();
     }
@@ -81,7 +83,10 @@ internal sealed class TyzeWindow : GameWindow
         
 #if DEBUG
         if (Input.IsDown(KeyCode.Escape))
+        {
             Close();
+            return;
+        }
 #endif
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < Game.FrameScripts.Count; i++)
@@ -104,13 +109,30 @@ internal sealed class TyzeWindow : GameWindow
         ALC.MakeContextCurrent(ALContext.Null);
         ALC.DestroyContext(_context);
         ALC.CloseDevice(_device);
-
         base.OnUnload();
     }
 
-    private void DrawObjects()
+    private void StepPhysics(IReadOnlyList<IGameObject> objects, float time)
     {
-        var objects = Game.CurrentScene.GetCurrentGameObjects();
+        _accumulator += time;
+
+        if (_accumulator > Game.Settings.FixedTime)
+            _accumulator = Game.Settings.FixedTime;
+
+        while (_accumulator > FrameTimeState.FixedTime)
+        {
+            Game.PhysicsWorld.Step(objects);
+
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var i = 0; i < Game.FrameScripts.Count; ++i)
+                Game.FrameScripts[i].InternalFixedExecute();
+
+            _accumulator -= FrameTimeState.FixedTime;
+        }
+    }
+
+    private void DrawObjects(IReadOnlyList<IGameObject> objects)
+    {
         var lights = objects.Where(obj => obj.VisualType is BodyVisualType.Light)
             .Cast<ILightObject>().ToList();
         
@@ -131,7 +153,7 @@ internal sealed class TyzeWindow : GameWindow
         _time += time;
         ++_frames;
 
-        if (_time < Constants.OneSecond) 
+        if (_time < 1) 
             return;
         
         Title = _title + " / FPS: " + _frames;

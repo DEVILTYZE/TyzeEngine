@@ -26,14 +26,12 @@ public class ObjectCreator<T> where T : class
     public virtual ObjectCreator<T> Create(object[] args = null)
     {
         Object = Create(typeof(T), args);
-
         return this;
     }
 
     public virtual ObjectCreator<T> SetProperty(string propertyName, object value)
     {
         SetProperty(Object, propertyName, value);
-        
         return this;
     }
 
@@ -94,7 +92,6 @@ public class ObjectCreator<T> where T : class
     private static bool IsThisConstructor(MethodBase constructor, IReadOnlyList<object> args)
     {
         var parameters = constructor.GetParameters().ToArray();
-
         return parameters.Where((parameter, i) => parameter.ParameterType == args[i].GetType()).Any();
     }
 

@@ -2,7 +2,7 @@
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
 
-namespace TyzeEngine.Physics;
+namespace TyzeEngine.Physics.Bodies;
 
 public class SphereBody : Body
 {
@@ -16,6 +16,8 @@ public class SphereBody : Body
 
         Center = center;
         Radius = radius;
+        var volume = MathF.PI / 3 * Radius * Radius * Radius * material.Density;
+        SetMassAndInertia(volume, volume);
     }
 
     public override IBody Clone(IBody obj = null) => 

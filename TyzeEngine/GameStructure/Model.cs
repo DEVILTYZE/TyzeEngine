@@ -20,7 +20,7 @@ public class Model : IModel
 {
     private bool _disposed;
 
-    public UId Id { get; set; } = new();
+    public UID Id { get; set; } = new();
     public INode RootNode { get; private set; } = new Node(null);
     public string Directory { get; private set; }
     public string Name { get; private set; }
@@ -105,7 +105,6 @@ public class Model : IModel
             throw new ArgumentNullException(nameof(name), "Name was null.");
         
         var isFound = Game.Models.TryGetValue(name, out var value);
-
         return isFound ? value : throw new Exception("Model not found.");
     }
     
@@ -181,7 +180,6 @@ public class Model : IModel
             Textures = textures
         };
         modelMesh.SetMesh(3);
-
         return modelMesh;
     }
 

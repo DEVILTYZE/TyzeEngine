@@ -6,7 +6,7 @@ namespace TyzeEngine.GameStructure;
 
 public abstract class Script : IScript
 {
-    public UId Id { get; set; } = new();
+    public UID Id { get; set; } = new();
 
     void IScript.InternalPrepare() => Prepare();
 
@@ -39,7 +39,6 @@ public abstract class Script : IScript
             throw new ArgumentNullException(nameof(name), "Name was null.");
         
         var isFound = Game.Scripts.TryGetValue(name, out var value);
-
         return isFound ? value : throw new Exception("Script not found.");
     }
 }

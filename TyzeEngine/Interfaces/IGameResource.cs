@@ -2,7 +2,7 @@
 
 public interface IGameResource
 {
-    UId Id { get; set; }
+    UID Id { get; set; }
 
     internal void Remove();
 }

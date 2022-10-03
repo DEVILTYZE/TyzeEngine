@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
 using TyzeEngine.Physics;
@@ -12,7 +11,7 @@ public class GameObject : IGameObject
 {
     string IGameObject.SpaceName { get; set; }
 
-    public UId Id { get; set; } = new();
+    public UID Id { get; set; } = new();
     public IModel Model { get; set; }
     public IBody Body { get; set; }
     public ITransform Transform { get; private set; }
@@ -23,14 +22,25 @@ public class GameObject : IGameObject
     public bool SaveStatus { get; set; }
     public bool IsTrigger { get; set; }
     public CollisionHandler OnCollision { get; set; }
+    public CollisionState CollisionState => (Body?.CollisionLayer ?? -1) switch
+    {
+        -1 => CollisionState.NonCollides,
+        0 => CollisionState.NonLayer,
+        _ => CollisionState.Layer
+    };
 
     public GameObject() => Transform = new Transform();
 
     public CollisionPoints TestCollision(ITransform transform, IGameObject obj, ITransform bodyTransform)
     {
-        var points = Body.TestCollision(transform, obj.Body, bodyTransform);
+        var bodyPoints = Body.TestCollision(transform, obj.Body, bodyTransform);
 
-        return points.IsCollides ? Model.TestCollision(transform, obj.Model, bodyTransform) : CollisionPoints.NonCollides;
+        if (!bodyPoints.IsCollides) 
+            return bodyPoints;
+        
+        var meshPoints = Model.TestCollision(transform, obj.Model, bodyTransform);
+        return meshPoints.IsCollides ? meshPoints : bodyPoints;
+
     }
 
     public override string ToString() => 
@@ -65,11 +75,8 @@ public class GameObject : IGameObject
             throw new ArgumentNullException(nameof(name), "Name was null.");
         
         var isFound = Game.GameObjects.TryGetValue(name, out var value);
-
         return isFound ? value : throw new Exception("GameObject not found.");
     }
-
-    public static IEnumerable<IGameObject> GetAll() => Game.GameObjects.Select(pair => pair.Value);
 
     void IGameObject.Draw(List<ILightObject> lights)
     {

@@ -14,7 +14,7 @@ public sealed class Scene : IScene
 
     Task IScene.LoadingSpacesTask => _loadingSpacesTask;
 
-    public UId Id { get; set; } = new();
+    public UID Id { get; set; } = new();
     public bool LoadError
     {
         get
@@ -27,7 +27,7 @@ public sealed class Scene : IScene
         private set => _loadError = value;
     }
     public ISpace CurrentSpace { get; set; }
-    public SortedList<UId, IModel> Models { get; } = new();
+    public SortedList<UID, IModel> Models { get; } = new();
     public TriggerHandler LoadSceneHandler { get; set; }
     
     public Scene() => CurrentSpace = new Space();
@@ -95,13 +95,12 @@ public sealed class Scene : IScene
             throw new ArgumentNullException(nameof(name), "Name was null.");
         
         var isFound = Game.Scenes.TryGetValue(name, out var value);
-
         return isFound ? value : throw new Exception("Scene not found.");
     }
 
     private void LoadSpace(object obj)
     {
-        var id = (UId)obj;
+        var id = (UID)obj;
         ISpace space = null;
 
         if (CurrentSpace.Id != id)

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using OpenTK.Mathematics;
+using TyzeEngine.Physics.Bodies;
 
 namespace TyzeEngine.Physics;
 
@@ -261,7 +262,7 @@ public static class GJK
         return new CollisionPoints
         {
             Normal = new Vector3(minNormal),
-            PenetrationDepth = minDistance,
+            Penetration = minDistance,
             IsCollides = true
         };
     }
@@ -353,7 +354,7 @@ public static class GJK
         return new CollisionPoints
         {
             Normal = minNormal,
-            PenetrationDepth = minDistance + float.Epsilon,
+            Penetration = minDistance + float.Epsilon,
             IsCollides = true
         };
     }

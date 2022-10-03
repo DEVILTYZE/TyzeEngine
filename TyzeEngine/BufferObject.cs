@@ -56,7 +56,6 @@ internal sealed class BufferObject : IDisposable
         var size = data.Length * Marshal.SizeOf(typeof(T));
         GL.BufferSubData(Type, _offset, size, data);
         _offset += size;
-
         Disable();
     }
 

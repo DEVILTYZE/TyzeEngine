@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
+using TyzeEngine.Physics.Methods;
 
-namespace TyzeEngine.Physics;
+namespace TyzeEngine.Physics.Bodies;
 
 public abstract class Body : IBody
 {
-    public int CollisionLayer { get; set; }
+    public int CollisionLayer { get; set; } = -1;
     public int Dimension { get; }
     public IMaterial Material { get; }
     public float Mass { get; private set; }
@@ -21,7 +22,6 @@ public abstract class Body : IBody
     public Vector3 Force { get; set; }
     public Vector3 GravityForce { get; set; }
     public bool TakesGravityForce { get; set; }
-    public bool IsEnabled { get; set; } = true;
 
     protected Body(IMaterial material, int dimension)
     {
@@ -34,7 +34,7 @@ public abstract class Body : IBody
     }
 
     public CollisionPoints TestCollision(ITransform transform, IBody body, ITransform bodyTransform) =>
-        CollisionMethods.Invoke(this, transform, body, bodyTransform);
+        CollisionMethods.Test(this, transform, body, bodyTransform);
 
     public void SetMassAndInertia(float mass, float inertia)
     {
@@ -58,7 +58,6 @@ public abstract class Body : IBody
         body.InverseMass = InverseMass;
         body.Inertia = Inertia;
         body.InverseInertia = InverseInertia;
-        body.IsEnabled = IsEnabled;
 
         return body;
     }

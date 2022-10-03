@@ -10,7 +10,7 @@ public abstract class Resource : IResource
 {
     protected bool Disposed;
 
-    public UId Id { get; set; } = new();
+    public UID Id { get; set; } = new();
 
     public int Handle { get; protected set; } = -1;
     public string Path { get; private set; }
@@ -64,7 +64,6 @@ public abstract class Resource : IResource
             throw new ArgumentNullException(nameof(name), "Name was null.");
         
         var isFound = Game.Resources.TryGetValue(name, out var value);
-
         return isFound ? value : throw new Exception("Resource not found.");
     }
 
@@ -91,10 +90,8 @@ public abstract class Resource : IResource
 
         if (Constants.ImageExtensions.Any(localExtension => IsEquals(localExtension, extension)))
             return new Texture(path);
-
         if (Constants.AudioExtensions.Any(localExtension => IsEquals(localExtension, extension)))
             return new Audio(path);
-
         if (Constants.VideoExtensions.Any(localExtension => IsEquals(localExtension, extension)))
             return new Video(path);
         

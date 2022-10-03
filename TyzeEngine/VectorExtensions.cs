@@ -10,21 +10,18 @@ internal static class Vector
     internal static Vector2 ToVector2(byte[] data)
     {
         var floats = ToFloats(data, Constants.Vector2Length).ToArray();
-            
         return new Vector2(floats[0], floats[1]);
     }
     
     internal static Vector3 ToVector3(byte[] data)
     {
         var floats = ToFloats(data, Constants.Vector3Length).ToArray();
-            
         return new Vector3(floats[0], floats[1], floats[2]);
     }
 
     internal static Vector4 ToVector4(byte[] data)
     {
         var floats = ToFloats(data, Constants.Vector4Length).ToArray();
-            
         return new Vector4(floats[0], floats[1], floats[2], floats[3]);
     }
 
@@ -33,28 +30,24 @@ internal static class Vector
     internal static Quaternion ToQuaternion(byte[] data)
     {
         var floats = ToFloats(data, Constants.Vector4Length).ToArray();
-        
         return new Quaternion(floats[0], floats[1], floats[2], floats[3]);
     }
     
     internal static byte[] ToBytes(Vector2 vector)
     {
         var (x, y) = vector;
-
         return GetBytes(new[] { x, y }, Constants.Vector2Stride);
     }
     
     internal static byte[] ToBytes(Vector3 vector)
     {
         var (x, y, z) = vector;
-
         return GetBytes(new[] { x, y, z }, Constants.Vector3Stride);
     }
     
     internal static byte[] ToBytes(Vector4 vector)
     {
         var (x, y, z, w) = vector;
-
         return GetBytes(new[] { x, y, z, w }, Constants.Vector4Stride);
     }
 
@@ -62,7 +55,6 @@ internal static class Vector
     {
         var (x, y, z) = quaternion.Xyz;
         var w = quaternion.W;
-        
         return GetBytes(new[] { x, y, z, w }, Constants.Vector4Stride);
     }
 

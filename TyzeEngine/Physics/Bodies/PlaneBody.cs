@@ -1,7 +1,7 @@
 ﻿using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
 
-namespace TyzeEngine.Physics;
+namespace TyzeEngine.Physics.Bodies;
 
 public class PlaneBody : Body
 {
@@ -12,7 +12,7 @@ public class PlaneBody : Body
     {
         Plane = plane;
         Distance = distance;
-        var mass = distance * distance;
+        var mass = distance * distance * material.Density;
         SetMassAndInertia(mass, mass);
     }
 

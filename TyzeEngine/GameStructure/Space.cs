@@ -10,7 +10,7 @@ public sealed class Space : ISpace
 {
     string ISpace.SceneOrSpaceName { get; set; }
     
-    public UId Id { get; set; } = new();
+    public UID Id { get; set; } = new();
     public List<ISpace> NeighbourSpaces { get; set; } = new();
     public List<IGameObject> GameObjects { get; set; } = new();
     public bool Loaded { get; set; }
@@ -38,7 +38,6 @@ public sealed class Space : ISpace
             throw new ArgumentNullException(nameof(name), "Name was null.");
         
         var isFound = Game.Spaces.TryGetValue(name, out var value);
-
         return isFound ? value : throw new Exception("Space not found.");
     }
 }

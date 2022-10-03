@@ -12,17 +12,15 @@ namespace TyzeEngine;
 internal sealed class Shader : IDisposable
 {
     private bool _disposed;
-    private readonly SortedList<string, int> _uniformLocations;
     private readonly string _name;
+    private readonly SortedList<string, int> _uniformLocations;
 
     internal string Error { get; private set; }
-    internal int Handle { get; }
+    internal int Handle { get; private set; }
     internal bool IsEnabled { get; private set; }
 
     internal Shader(string vertexPath, string fragmentPath)
     {
-        Error = string.Empty;
-
         if (!File.Exists(vertexPath))
             throw new FileNotFoundException("Vertex shader not found.", vertexPath);
 
@@ -63,7 +61,7 @@ internal sealed class Shader : IDisposable
     }
 
     ~Shader() => ReleaseUnmanagedResources();
-    
+
     internal void Enable()
     {
         IsEnabled = true;

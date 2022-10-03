@@ -6,7 +6,7 @@ namespace TyzeEngine.GameStructure;
 
 public abstract class Material : IMaterial
 {
-    public UId Id { get; set; } = new();
+    public UID Id { get; set; } = new();
     public float Density { get; protected init; }
     public float Restitution { get; protected init; }
     public float StaticFriction { get; protected init; }
@@ -29,7 +29,6 @@ public abstract class Material : IMaterial
             throw new ArgumentNullException(nameof(name), "Name was null.");
         
         var isFound = Game.Materials.TryGetValue(name, out var value);
-
         return isFound ? value : throw new Exception("Material not found.");
     }
 }

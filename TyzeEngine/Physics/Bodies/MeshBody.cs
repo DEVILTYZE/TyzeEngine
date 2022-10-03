@@ -1,7 +1,7 @@
 ﻿using OpenTK.Mathematics;
 using TyzeEngine.Interfaces;
 
-namespace TyzeEngine.Physics;
+namespace TyzeEngine.Physics.Bodies;
 
 public class MeshBody : Body
 {

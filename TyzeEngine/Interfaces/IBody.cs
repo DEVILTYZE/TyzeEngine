@@ -20,7 +20,6 @@ public interface IBody : IDeepCloneable<IBody>
     Vector3 Force { get; set; }
     Vector3 GravityForce { get; set; }
     bool TakesGravityForce { get; set; }
-    bool IsEnabled { get; set; }
     
     CollisionPoints TestCollision(ITransform transform, IBody body, ITransform bodyTransform);
     void SetMassAndInertia(float mass, float inertia);
